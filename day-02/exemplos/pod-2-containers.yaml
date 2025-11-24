@@ -1,0 +1,21 @@
+# kubectl apply -f pod-2-containers.yaml
+# kubectl delete -f pod-2-containers.yaml
+apiVersion: v1 
+kind: Pod 
+metadata: 
+  labels:
+    run: girus
+    service:  webserver 
+  name: girus
+spec:
+  containers:
+  - image: nginx 
+    name: girus 
+  - image: busybox
+    name: busybox
+    args: 
+      - sleep 
+      - "600"
+  resources: { }
+  dnsPolicy: ClusterFirst 
+  restartPolicy: Always
