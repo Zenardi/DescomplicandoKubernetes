@@ -78,12 +78,13 @@ Events:
 
 Ao alocar a quantidade de memoria requerida pela aplicacao, ela voltou ao status Running.
 
-# 🔎 Pergunta 1: Qual mecanismo do Linux foi acionado?
+# 🔎 Pergunta 1: Quando o Pod foi morto na "Parte 2", qual mecanismo do Linux (que vimos no Cap 1) foi acionado pelo Kubernetes/Container Runtime para parar o processo?
 Quando o Pod foi morto na Parte 2, o processo dentro do container tentou alocar 250MB de RAM, mas o limite configurado era de apenas 200Mi (~200MB).
 Nesse momento, o cgroup (control group) do Linux detectou que o processo ultrapassou o limite de memória permitido.
 - O kernel acionou o mecanismo chamado OOM Killer (Out Of Memory Killer).
 - O OOM Killer é responsável por encerrar processos que excedem os limites de memória, evitando que o sistema inteiro fique sem recursos.
 - No Kubernetes, isso aparece como o status OOMKilled no Pod.
+
 👉 Em resumo: o cgroup impôs o limite e o OOM Killer matou o processo.
 
 # 🔎 Pergunta 2: Qual a diferença prática entre definir um request de 100Mi e um limit de 200Mi? O que o Scheduler usa para decidir onde colocar o Pod?
