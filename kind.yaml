@@ -6,4 +6,4 @@ nodes:
 - role: worker
 - role: worker
 
-# kind create cluster --config day-01/exemplos/kind.yaml
+# kind create cluster --config kind.yaml
