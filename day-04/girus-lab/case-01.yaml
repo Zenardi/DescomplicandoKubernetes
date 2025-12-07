@@ -130,7 +130,7 @@ data:
             title: "CrashLoopBackOff"
             content: "Este status indica que o container está reiniciando repetidamente. O Kubernetes aumenta o tempo entre as tentativas (backoff) para não sobrecarregar o sistema."
         validation:
-          - command: "kubectl get pods -n producao 2>/dev/null | grep -E 'CrashLoopBackOff|OOMKilled|Error' | wc -l | tr -d ' '"
+          - command: "[ $(kubectl get pods -n producao 2>/dev/null | grep -E 'CrashLoopBackOff|OOMKilled|Error' | wc -l | tr -d ' ') -ge 1 ] && echo '>= 1'|| echo '0'"
             expectedOutput: ">= 1"
             errorMessage: "Nenhum Pod problemático encontrado. Aplique o deployment-quebrado.yaml e aguarde alguns segundos."
 
@@ -167,7 +167,7 @@ data:
             title: "Flag --previous"
             content: "Use `kubectl logs --previous` para ver os logs da execução anterior do container. Essencial quando o container atual está reiniciando constantemente."
         validation:
-          - command: "kubectl describe pod -n producao -l version=v2-problematica 2>/dev/null | grep -c 'OOMKilled\\|BackOff\\|Unhealthy' || echo '0'"
+          - command: "[ $(kubectl describe pod -n producao -l version=v2-problematica 2>/dev/null | grep -c 'OOMKilled\\|BackOff\\|Unhealthy') -ge 1 ] && echo '>= 1' || echo '0'"
             expectedOutput: ">= 1"
             errorMessage: "Não foi possível encontrar evidências de OOMKilled ou falhas. Verifique se o Pod problemático existe."
 
@@ -203,7 +203,7 @@ data:
             title: "Rolling Update Travado"
             content: "Se os novos Pods não ficam Ready, o rolling update fica travado. O Kubernetes não vai matar todos os Pods antigos até que os novos estejam funcionando."
         validation:
-          - command: "kubectl get replicaset -n producao --no-headers 2>/dev/null | wc -l | tr -d ' '"
+          - command: "[ $(kubectl get replicaset -n producao --no-headers 2>/dev/null | wc -l | tr -d ' ') -ge 2 ] && echo '>= 2' || echo '0'"
             expectedOutput: ">= 2"
             errorMessage: "Deve haver pelo menos 2 ReplicaSets (versão antiga e nova). Verifique se o deploy foi aplicado."
 
