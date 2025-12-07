@@ -1,7 +1,3 @@
-# importar lá no Girus com:
-# girus create lab -f case-01.yaml
-# Depois é só acessar o Girus e procurar pelo lab Caso 1: O Deploy de Sexta-Feira e praticar!
-
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -104,7 +100,7 @@ data:
                 spec:
                   containers:
                   - name: meu-servico-container
-                    image: linuxtips/girus-oomkill-simulator:1.0
+                    image: linuxtips/memory-eater:0.1
                     # Simulando limites muito baixos para forçar OOMKill
                     resources:
                       limits:
@@ -135,7 +131,7 @@ data:
             content: "Este status indica que o container está reiniciando repetidamente. O Kubernetes aumenta o tempo entre as tentativas (backoff) para não sobrecarregar o sistema."
         validation:
           - command: "kubectl get pods -n producao 2>/dev/null | grep -E 'CrashLoopBackOff|OOMKilled|Error' | wc -l | tr -d ' '"
-            expectedExpression: ">= 1"
+            expectedOutput: ">= 1"
             errorMessage: "Nenhum Pod problemático encontrado. Aplique o deployment-quebrado.yaml e aguarde alguns segundos."
 
       - name: "Passo 2: Aprofundando nos Logs e Eventos"
@@ -172,7 +168,7 @@ data:
             content: "Use `kubectl logs --previous` para ver os logs da execução anterior do container. Essencial quando o container atual está reiniciando constantemente."
         validation:
           - command: "kubectl describe pod -n producao -l version=v2-problematica 2>/dev/null | grep -c 'OOMKilled\\|BackOff\\|Unhealthy' || echo '0'"
-            expectedExpression: ">= 1"
+            expectedOutput: ">= 1"
             errorMessage: "Não foi possível encontrar evidências de OOMKilled ou falhas. Verifique se o Pod problemático existe."
 
       - name: "Passo 3: Como Foi a Transição?"
@@ -208,7 +204,7 @@ data:
             content: "Se os novos Pods não ficam Ready, o rolling update fica travado. O Kubernetes não vai matar todos os Pods antigos até que os novos estejam funcionando."
         validation:
           - command: "kubectl get replicaset -n producao --no-headers 2>/dev/null | wc -l | tr -d ' '"
-            expectedExpression: ">= 2"
+            expectedOutput: ">= 2"
             errorMessage: "Deve haver pelo menos 2 ReplicaSets (versão antiga e nova). Verifique se o deploy foi aplicado."
 
       - name: "Passo 4: Revisando o Manifesto (A Causa Raiz)"
