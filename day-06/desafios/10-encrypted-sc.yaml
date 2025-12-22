@@ -1,0 +1,11 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: aws-ebs-encrypted
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  type: gp3
+  encrypted: "true"
+  kmsKeyId: "arn:aws:kms:us-east-1:620613630634:key/26d54f95-c5fa-420f-a7b3-6434176cb094"
+

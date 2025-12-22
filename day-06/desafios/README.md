@@ -124,6 +124,30 @@ Estes exercícios assumem que você está utilizando um cluster com o driver **A
 
 **Conceito:** O Kubernetes permite padronizar a criação de snapshots de disco (AWS EBS Snapshots) através da API `VolumeSnapshot`. *Nota: Requer que os CRDs de Snapshot e o Snapshot Controller estejam instalados no cluster.*
 
+```shell
+# 1. Definição de Snapshot Classes
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.3.3/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+
+# 2. Definição de Snapshot Contents
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.3.3/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+
+# 3. Definição de Snapshots
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.3.3/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+
+# Instala o controller no namespace kube-system
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.3.3/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v6.3.3/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
+
+# Verifique se o controlador subiu corretamente.
+kubectl get pods -n kube-system -l app=snapshot-controller
+
+---
+NAME                                   READY   STATUS    RESTARTS   AGE
+snapshot-controller-7d99fcf5cd-kpn56   1/1     Running   0          13s
+snapshot-controller-7d99fcf5cd-lvgjx   1/1     Running   0          13s
+
+```
+
 **Cenário:** Você vai realizar uma manutenção arriscada no banco de dados e precisa garantir um ponto de restauração rápido.
 
 **Tarefa:**

@@ -141,7 +141,9 @@ resource "aws_iam_role" "eks_node_role" {
 resource "aws_iam_role_policy_attachment" "node_policies" {
   for_each = toset([
     "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
-    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+    "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy",
+    "arn:aws:iam::aws:policy/service-role/AmazonEFSCSIDriverPolicy"
   ])
   policy_arn = each.value
   role       = aws_iam_role.eks_node_role.name
@@ -343,4 +345,194 @@ resource "aws_eks_pod_identity_association" "vpc_cni" {
   role_arn        = aws_iam_role.vpc_cni_role.arn
 
   depends_on = [aws_eks_addon.pod_identity]
+}
+
+# ==============================================================================
+# 8. STORAGE (O que faltava!) - EBS CSI DRIVER
+# ==============================================================================
+
+# 1. Role IAM para o EBS CSI Driver
+# Permite que o driver converse com a API da AWS para criar/deletar discos (EC2 Volumes)
+resource "aws_iam_role" "ebs_csi_role" {
+  name = "study-ebs-csi-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com" # Integração com Pod Identity
+        }
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession"
+        ]
+      }
+    ]
+  })
+}
+
+# Anexa a policy gerenciada da AWS que dá permissão de Storage
+resource "aws_iam_role_policy_attachment" "ebs_csi_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = aws_iam_role.ebs_csi_role.name
+}
+
+# 2. Instala o Add-on no Cluster EKS
+resource "aws_eks_addon" "ebs_csi" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "aws-ebs-csi-driver"
+
+  # Garante que a versão mais recente compatível seja instalada
+  addon_version = "v1.30.0-eksbuild.1" # Ou remova para pegar a default, mas é bom fixar
+
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  # O driver precisa dos nós rodando para ser instalado
+  depends_on = [aws_eks_node_group.main]
+}
+
+# 3. Associação de Identidade (A "cola" entre o K8s e a AWS)
+# Diz: "O Pod do driver EBS (ServiceAccount ebs-csi-controller-sa) pode usar a Role study-ebs-csi-role"
+resource "aws_eks_pod_identity_association" "ebs_csi" {
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "kube-system"
+  service_account = "ebs-csi-controller-sa"
+  role_arn        = aws_iam_role.ebs_csi_role.arn
+
+  depends_on = [aws_eks_addon.ebs_csi]
+}
+
+
+# ==============================================================================
+# 9. EFS (Elastic File System) - Para o Exercicio 9 (ReadWriteMany)
+# ==============================================================================
+
+# --- 1. Security Group do EFS ---
+# Permite que os nós (na VPC) falem com o EFS na porta 2049
+resource "aws_security_group" "efs_sg" {
+  name        = "study-efs-sg"
+  description = "Permite trafego NFS para o EFS"
+  vpc_id      = aws_vpc.k8s_vpc.id
+
+  ingress {
+    description = "NFS da VPC inteira"
+    from_port   = 2049
+    to_port     = 2049
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.k8s_vpc.cidr_block]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# --- 2. O File System (O Disco) ---
+resource "aws_efs_file_system" "k8s_efs" {
+  creation_token = "k8s-lab-efs"
+  encrypted      = true
+
+  tags = {
+    Name = "k8s-lab-efs"
+  }
+}
+
+# --- 3. Mount Targets (As "Pontes" de Rede) ---
+# Cria uma interface de rede em CADA subnet privada onde seus nós rodam
+resource "aws_efs_mount_target" "zones" {
+  count           = length(aws_subnet.private) # Cria 1 para cada subnet privada
+  file_system_id  = aws_efs_file_system.k8s_efs.id
+  subnet_id       = aws_subnet.private[count.index].id
+  security_groups = [aws_security_group.efs_sg.id]
+}
+
+# ==============================================================================
+# 10. DRIVER EFS PARA KUBERNETES (Essencial!)
+# ==============================================================================
+
+# 1. Role IAM para o EFS CSI Driver
+resource "aws_iam_role" "efs_csi_role" {
+  name = "study-efs-csi-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com"
+        }
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "efs_csi_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEFSCSIDriverPolicy"
+  role       = aws_iam_role.efs_csi_role.name
+}
+
+# 2. Instala o Add-on no Cluster
+resource "aws_eks_addon" "efs_csi" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "aws-efs-csi-driver"
+
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  depends_on = [aws_eks_node_group.main]
+}
+
+# 3. Associação de Identidade (Pod Identity)
+resource "aws_eks_pod_identity_association" "efs_csi" {
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "kube-system"
+  service_account = "efs-csi-controller-sa"
+  role_arn        = aws_iam_role.efs_csi_role.arn
+
+  depends_on = [aws_eks_addon.efs_csi]
+}
+
+# --- Output para facilitar sua vida ---
+output "efs_id" {
+  value       = aws_efs_file_system.k8s_efs.id
+  description = "Copie este ID para usar no seu StorageClass do Exercicio 9"
+}
+
+# ==============================================================================
+# 10. KMS (Key Management Service) - Para o Exercicio 10 (Encryption)
+# ==============================================================================
+
+# 1. A Chave Mestra (CMK)
+resource "aws_kms_key" "k8s_key" {
+  description             = "Chave de criptografia para volumes Kubernetes (Lab)"
+  deletion_window_in_days = 7    # Se deletar, ela some de verdade em 7 dias
+  enable_key_rotation     = true # Boa pratica de seguranca
+
+  tags = {
+    Name = "k8s-lab-key"
+  }
+}
+
+# 2. Um Alias (Apelido) para facilitar a leitura no Console da AWS
+resource "aws_kms_alias" "k8s_key_alias" {
+  name          = "alias/k8s-lab-key"
+  target_key_id = aws_kms_key.k8s_key.key_id
+}
+
+# --- Output Importante ---
+# Este valor é o que você vai copiar para o YAML da StorageClass
+output "kms_key_arn" {
+  value       = aws_kms_key.k8s_key.arn
+  description = "ARN da chave KMS para usar na StorageClass (Exercicio 10)"
 }
