@@ -225,7 +225,7 @@ resource "aws_eks_node_group" "main" {
 
   capacity_type  = "SPOT"
   ami_type       = "BOTTLEROCKET_ARM_64"
-  instance_types = ["t4g.small"]
+  instance_types = ["t4g.medium"]
 
   scaling_config {
     desired_size = 1

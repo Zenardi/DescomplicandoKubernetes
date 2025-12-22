@@ -1,0 +1,1 @@
+### Use os codigos terraform desta pasta para provisionar cluster Kubernetes na AWS ou GCP para fazer os desafios do curso.

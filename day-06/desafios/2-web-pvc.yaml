@@ -7,4 +7,6 @@ spec:
     requests:
       storage: 5Gi
   storageClassName: aws-sc-fast
+  accessModes:
+    - ReadWriteOnce
 

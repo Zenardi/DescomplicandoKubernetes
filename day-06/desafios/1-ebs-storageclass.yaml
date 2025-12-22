@@ -4,7 +4,7 @@ metadata:
   name: aws-sc-fast
 reclaimPolicy: Delete
 allowVolumeExpansion: true
-volumeBidingMode: WaitFirstConsumer
+volumeBindingMode: WaitForFirstConsumer
 provisioner: ebs.csi.aws.com
 parameters:
   type: gp3
