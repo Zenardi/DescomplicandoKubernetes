@@ -4,7 +4,11 @@ name: linuxtips
 nodes:
 - role: control-plane
 - role: worker
+  labels:
+    name: node-01
 - role: worker
+  labels:
+    name: node-02
 
 # kind create cluster --config kind.yaml
 # kind delete cluster --name linuxtips
