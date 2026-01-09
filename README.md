@@ -5,6 +5,11 @@
 - [Indice](#indice)
 - [Descomplicando o Kubernetes - Expert Mode](#descomplicando-o-kubernetes---expert-mode)
   - [Conteúdo](#conteúdo)
+- [Como usar o Laboratorio do Girus](#como-usar-o-laboratorio-do-girus)
+  - [Instale Girus CLI](#instale-girus-cli)
+  - [Crie o Cluster](#crie-o-cluster)
+  - [Importe um laboratorio](#importe-um-laboratorio)
+  - [Usar uma versao especifica](#usar-uma-versao-especifica)
 
 
 # Descomplicando o Kubernetes - Expert Mode
@@ -229,5 +234,49 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
   - [Final do Day-8](day-08/README.md#final-do-day-8)
 </details>
 
+<details>
+<summary>DAY-09: Descomplicando Ingress</summary>
+
+- [O que é o Ingress?](day-09/README.md#o-que-é-o-ingress)
+- [Principais Componentes e Funcionalidades:](day-09/README.md#principais-componentes-e-funcionalidades)
+- [Usando KinD com Ingress](day-09/README.md#usando-kind-com-ingress)
+  - [Introdução](day-09/README.md#introdução)
+  - [Criando o Cluster com Configurações Especiais](day-09/README.md#criando-o-cluster-com-configurações-especiais)
+  - [Instalando um Ingress Controller](day-09/README.md#instalando-um-ingress-controller)
+    - [KinD](day-09/README.md#kind)
+    - [Minikube](day-09/README.md#minikube)
+    - [MicroK8s](day-09/README.md#microk8s)
+    - [AWS (Amazon Web Services)](day-09/README.md#aws-amazon-web-services)
+    - [Azure](day-09/README.md#azure)
+    - [GCP (Google Cloud Platform)](day-09/README.md#gcp-google-cloud-platform)
+    - [Bare Metal](day-09/README.md#bare-metal)
+- [Criando um Recurso de Ingress](day-09/README.md#criando-um-recurso-de-ingress)
+
+</summary>
+
 &nbsp;
 
+
+# Como usar o Laboratorio do Girus
+## Instale Girus CLI
+Va ate o [repositorio](https://github.com/badtuxx/girus-cli) oficial do Girus CLI e siga as instrucoes.
+
+## Crie o Cluster
+Com a linha de comando instalada, crie o cluster usando
+```shell
+girus create cluster
+```
+NOTA: É necessario ter Docker e kind previamente instalados
+
+## Importe um laboratorio
+Importe um laboratorio usando 
+```shell
+girus create lab -f lab.yaml
+```
+
+## Usar uma versao especifica
+```shell
+kubectl set image deployment/girus-backend backend=linuxtips/girus-backend:0.5.0 -n girus 
+kubectl set image deployment/girus-frontend frontend=linuxtips/girus-frontend:0.5.0 -n girus 
+kubectl port-forward -n girus --address 0.0.0.0 svc/girus-frontend 8000:80
+```
