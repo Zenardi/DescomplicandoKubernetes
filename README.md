@@ -252,7 +252,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
     - [Bare Metal](day-09/README.md#bare-metal)
 - [Criando um Recurso de Ingress](day-09/README.md#criando-um-recurso-de-ingress)
 
-</summary>
+</details>
 
 &nbsp;
 
