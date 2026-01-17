@@ -10,6 +10,7 @@
   - [Crie o Cluster](#crie-o-cluster)
   - [Importe um laboratorio](#importe-um-laboratorio)
   - [Usar uma versao especifica](#usar-uma-versao-especifica)
+- [Provisionando um cluster EKS para testes](#provisionando-um-cluster-eks-para-testes)
 
 
 # Descomplicando o Kubernetes - Expert Mode
@@ -465,4 +466,14 @@ girus create lab -f lab.yaml
 kubectl set image deployment/girus-backend backend=linuxtips/girus-backend:0.5.0 -n girus 
 kubectl set image deployment/girus-frontend frontend=linuxtips/girus-frontend:0.5.0 -n girus 
 kubectl port-forward -n girus --address 0.0.0.0 svc/girus-frontend 8000:80
+```
+
+# Provisionando um cluster EKS para testes
+
+Para instalar o eksctl, siga as instruções do link: https://eksctl.io/installation/
+
+Após instalar o eksctl, crie o cluster EKS com o comando:
+
+```bash
+eksctl create cluster --name=eks-cluster --version=1.24 --region=us-east-1 --nodegroup-name=eks-cluster-nodegroup --node-type=t3.medium --nodes=2 --nodes-min=1 --nodes-max=3 --managed
 ```
