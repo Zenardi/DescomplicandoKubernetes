@@ -252,7 +252,8 @@ eksctl delete cluster -f files/eksctl/cluster-config-optimized.yaml --wait --dis
 eksctl delete cluster -f files/eksctl/cluster-config.yaml --wait --disable-nodegroup-eviction
 ```
 
-> [!WARNING] Use a flag `--wait` para operações de deleçao para se garantir que errors de deleção sejam reportados adequadamente.
+> [!TIP]
+> Use a flag `--wait` para operações de deleçao para se garantir que errors de deleção sejam reportados adequadamente.
 
 
 Após a criação do nosso cluster EKS, precisamos instalar o `kubectl` em nossa máquina. Para instalar o kubectl, basta executar o seguinte comando:
