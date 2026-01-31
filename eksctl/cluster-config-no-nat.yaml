@@ -2,11 +2,18 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 metadata:
   name: descomplicandok8s
-  region: us-east-2
-  version: "1.35"
+  region: us-east-2  # Ou sa-east-1 (SP), mas SP é mais caro
+  version: "1.35"    # Use a versão que preferir
 
 iam:
   withOIDC: true
+
+vpc:
+  clusterEndpoints:
+    publicAccess: true  # Acesso à API do cluster via internet
+    privateAccess: true # Necessário para o node falar com a API
+  nat:
+    gateway: Disable  # Desabilita o NAT Gateway
 
 managedNodeGroups:
   - name: ng-descomplicandok8s
@@ -22,6 +29,7 @@ managedNodeGroups:
     volumeThroughput: 125 # Grátis no gp3 (incluso no preço base)
     
     spot: true                # Usa instâncias SPOT para economizar ~70%
+    privateNetworking: false  # Garante que os nós tenham IP público
     amiFamily: Bottlerocket
     
     iam:
@@ -35,22 +43,6 @@ managedNodeGroups:
       NodeType: spot
       env: descomplicandok8s
       ami-family: bottlerocket
-
-
-  # Nodegroup opcional: On-Demand para workloads críticas
-  # - name: on-demand-standard
-  #   instanceType: t3.medium
-  #   desiredCapacity: 1
-  #   minSize: 1
-  #   maxSize: 3
-  #   taints:
-  #     - key: dedicated
-  #       value: "true"
-  #       effect: NoSchedule
-  #   tags:
-  #     NodeType: on-demand
-  #   labels:
-  #     workload: critical
 
 addons:
   - name: vpc-cni

@@ -386,14 +386,19 @@ eksctl create cluster --name=eks-cluster \
 # Use este comando para provisionar nodes on-demand
 eksctl create cluster -f eksctl/cluster-config.yaml 
 
-# Use este comando para provisionar nodes spot+bottlerocket
+# Use este comando para provisionar nodes spot+bottlerocket (com nat)
 eksctl create cluster -f eksctl/cluster-config-optmized.yaml 
+
+# Use este comando para provisionar nodes spot+bottlerocket (sem nat). Opção mais barata possivel
+eksctl create cluster -f eksctl/cluster-config-no-nat.yaml 
+
 ```
 
 ## Deletar o cluster
 Para deletar os clusters criados, execute um dos comandos abaixo.
 
 ```sh
-eksctl delete cluster -f eksctl/cluster-config.yaml --wait --disable-nodegroup-eviction 
-eksctl delete cluster -f eksctl/cluster-config-optimized.yaml --wait --disable-nodegroup-eviction 
+eksctl delete cluster -f eksctl/cluster-config.yaml --wait --disable-nodegroup-eviction
+eksctl delete cluster -f eksctl/cluster-config-optimized.yaml --wait --disable-nodegroup-eviction
+eksctl delete cluster -f eksctl/cluster-config-no-nat.yaml --wait --disable-nodegroup-eviction
 ```

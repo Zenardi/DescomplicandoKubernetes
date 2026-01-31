@@ -1,23 +1,32 @@
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 metadata:
-  name: kube-prometheus-demo
-  region: sa-east-1
-  version: "1.34"
+  name: descomplicandok8s
+  region: us-east-2
+  version: "1.35"
 
 iam:
   withOIDC: true
 
-nodeGroups:
-  - name: linux-nodes
+managedNodeGroups:
+  - name: ng-descomplicandok8s
     instanceType: t3.medium
-    desiredCapacity: 3
     minSize: 1
     maxSize: 3
-    ssh:
-      allow: false
+    desiredCapacity: 1
+
+    # --- OTIMIZAÇÃO DE DISCO ---
+    volumeSize: 20
+    volumeType: gp3       # <--- MAIS BARATO: gp3 custa $0.08/GB vs $0.10/GB do gp2
+    volumeIOPS: 3000      # Grátis no gp3 (incluso no preço base)
+    volumeThroughput: 125 # Grátis no gp3 (incluso no preço base)
+
     tags:
-      Environment: demo
+      NodeType: on-demand
+      env: descomplicandok8s
+      ami-family: ec2-linux
+
+
 addons:
   - name: vpc-cni
     version: latest
