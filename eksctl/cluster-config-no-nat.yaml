@@ -2,19 +2,18 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 metadata:
   name: descomplicandok8s
-  region: us-east-2  # Ou sa-east-1 (SP), mas SP é mais caro
-  version: "1.35"    # Use a versão que preferir
+  region: us-east-2
+  version: "1.35" 
 
 iam:
   withOIDC: true
-  podIdentityAssociations: []
 
 vpc:
-  clusterEndpoints:
-    publicAccess: true  # Acesso à API do cluster via internet
-    privateAccess: true # Necessário para o node falar com a API
   nat:
-    gateway: Disable  # Desabilita o NAT Gateway
+    gateway: Disable
+  clusterEndpoints:
+    publicAccess: true
+    privateAccess: true
 
 managedNodeGroups:
   - name: ng-descomplicandok8s
@@ -22,53 +21,49 @@ managedNodeGroups:
     minSize: 1
     maxSize: 3
     desiredCapacity: 1
-
-    # --- OTIMIZAÇÃO DE DISCO ---
-    volumeSize: 20
-    volumeType: gp3       # <--- MAIS BARATO: gp3 custa $0.08/GB vs $0.10/GB do gp2
-    volumeIOPS: 3000      # Grátis no gp3 (incluso no preço base)
-    volumeThroughput: 125 # Grátis no gp3 (incluso no preço base)
-    
-    spot: true                # Usa instâncias SPOT para economizar ~70%
-    privateNetworking: false  # Garante que os nós tenham IP público
+    spot: true
     amiFamily: Bottlerocket
     
     iam:
       withAddonPolicies:
         imageBuilder: true
         autoScaler: true
+        ebs: true
       attachPolicyARNs:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-
-    tags:
-      NodeType: spot
-      env: descomplicandok8s
-      ami-family: bottlerocket
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        
+  # Opcional: Node group com taints para workloads experimentais
+  # - name: ng-descomplicandok8s-taints
+  #   taints:
+  #     - key: "dedicated"
+  #       value: "experimental"
+  #       effect: "NoSchedule"
+  #   instanceTypes: ["t3a.medium", "t3.medium"]
+  #   minSize: 1
+  #   maxSize: 3
+  #   desiredCapacity: 1
+  #   spot: true
+  #   amiFamily: Bottlerocket
+    
+  #   iam:
+  #     withAddonPolicies:
+  #       imageBuilder: true
+  #       autoScaler: true
+  #       ebs: true
+  #     attachPolicyARNs:
+  #       - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+  #       - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
 
 addons:
-  # 1. VPC-CNI com Pod Identity
   - name: vpc-cni
     version: latest
-    podIdentityAssociations:
-      - namespace: kube-system
-        serviceAccountName: aws-node
-        permissionPolicyARNs:
-          - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
 
-  # 2. EBS CSI Driver com Pod Identity
   - name: aws-ebs-csi-driver
-    version: latest
-    podIdentityAssociations:
-      - namespace: kube-system
-        serviceAccountName: ebs-csi-controller-sa
-        permissionPolicyARNs:
-          - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
-
-  # 3. Addon essencial para o Pod Identity funcionar
-  - name: eks-pod-identity-agent
     version: latest
 
   - name: coredns
     version: latest
+
   - name: kube-proxy
     version: latest
