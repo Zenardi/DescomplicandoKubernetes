@@ -26,7 +26,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 ## Conteúdo
 
 <details>
-<summary>DAY-01</summary>
+<summary>DAY-01 - Entendendo o que são Containers e o Kubernetes</summary>
 
 - [DAY-1](day-01/README.md#day-1)
   - [O quê preciso saber antes de começar?](day-01/README.md#o-quê-preciso-saber-antes-de-começar)
@@ -75,7 +75,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 </details>
 
 <details>
-<summary>DAY-02</summary>
+<summary>DAY-02 - Descomplicando os Pods e Limites de Recursos</summary>
 
 - [DAY-2](day-02/README.md#day-2)
   - [O que iremos ver hoje?](day-02/README.md#o-que-iremos-ver-hoje)
@@ -93,7 +93,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 </details>
 
 <details>
-<summary>DAY-03</summary>
+<summary>DAY-03 - Descomplicando os Deployments e Estratégias de Rollout</summary>
 
 - [DAY-3](day-03/README.md#day-3)
   - [Inicio da aula do Day-3](day-03/README.md#inicio-da-aula-do-day-3)
@@ -117,7 +117,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 </details>
 
 <details>
-<summary>DAY-04</summary>
+<summary>DAY-04 - Descomplicando ReplicaSets, DaemonSets e as Probes do Kubernetes</summary>
 
 - [DAY-4](day-04/README.md)
 - [Inicio da aula do Day-4](day-04/README.md#inicio-da-aula-do-day-4)
@@ -142,7 +142,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 </details>
 
 <details>
-<summary>DAY-05</summary>
+<summary>DAY-05 - Criando nosso Cluster Kubernetes multi-nodes</summary>
 
 - [DAY-5](day-05/README.md#day-5)
 - [Conteúdo do Day-5](day-05/README.md#conteúdo-do-day-5)
@@ -172,7 +172,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 </details>
 
 <details>
-<summary>DAY-06</summary>
+<summary>DAY-06 - Descomplicando os Volumes no K8s</summary>
 
 - [DAY-6](day-06/README.md#day-6)
   - [Conteúdo do Day-6](day-06/README.md#conteúdo-do-day-6)
@@ -189,7 +189,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 </details>
 
 <details>
-<summary>DAY-07</summary>
+<summary>DAY-07 - Descomplicando StatefulSets e os Services no Kubernetes</summary>
 
 - [DAY-7](day-07/README.md#day-7)
 - [Conteúdo do Day-7](day-07/README.md#conteúdo-do-day-7)
@@ -221,7 +221,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 
 
 <details>
-<summary>DAY-08</summary>
+<summary>DAY-08 - Descomplicando os Secrets e ConfigMaps no Kubernetes</summary>
 
 - [Descomplicando o Kubernetes](day-08/README.md#descomplicando-o-kubernetes)
   - [DAY-8](day-08/README.md#day-8)
@@ -241,7 +241,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 </details>
 
 <details>
-<summary>DAY-09</summary>
+<summary>DAY-09 - Descomplicando o Ingress</summary>
 
 - [Descomplicando o Kubernetes](day-09/README.md#descomplicando-o-kubernetes)
   - [DAY-9: Descomplicando o Ingress no Kubernetes](day-09/README.md#day-9-descomplicando-o-ingress-no-kubernetes)
@@ -275,7 +275,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 </details>
 
 <details>
-<summary>DAY-10</summary>
+<summary>DAY-10 - Descomplicando Ingress com TLS, Labels, Annotations e o Cert-manager</summary>
 
 - [Descomplicando o Kubernetes](day-10/README.md#descomplicando-o-kubernetes)
   - [DAY-10: Descomplicando Ingress com TLS, Labels, Annotations e o Cert-manager](day-10/README.md#day-10-descomplicando-ingress-com-tls-labels-annotations-e-o-cert-manager)
@@ -297,7 +297,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 </details>
 
 <details>
-<summary>DAY-11</summary>
+<summary>DAY-11 - Descomplicando o Kube-Prometheus no EKS</summary>
 
 - [Descomplicando o Kubernetes](day-11/README.md#descomplicando-o-kubernetes)
   - [DAY-11: Descomplicando o Kube-Prometheus no EKS](day-11/README.md#day-11-descomplicando-o-kube-prometheus-no-eks)
@@ -315,7 +315,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 
 
 <details>
-<summary class="summary">DAY-12</summary>
+<summary class="summary">DAY-12 - Descomplicando os ServiceMonitors, PodMonitors e os Alertas no Kubernetes</summary>
 
 - [Descomplicando o Prometheus](day-12/README.md#descomplicando-o-prometheus)
   - [DAY-12](day-12/README.md#day-12)
@@ -335,7 +335,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 </details>
 
 <details>
-<summary class="summary">DAY-13</summary>
+<summary class="summary">DAY-13 - Criando Imagens de Containers e Reduzindo Vulnerabilidades com Wolfi</summary>
 
 - [Descomplicando Containers - DAY-13](day-13/README.md#descomplicando-containers---day-13)
 - [Imagens Distroless](day-13/README.md#imagens-distroless)
