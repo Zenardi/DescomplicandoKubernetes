@@ -1,145 +1,171 @@
-# Proposta de **Architecture Decision Record (ADR)** formal, estruturada para responder à RFP do KubeBank, com base nas melhores práticas
+# KUBEBANK - ARCHITECTURE DECISION RECORD (ADR)
 
-- [Proposta de **Architecture Decision Record (ADR)** formal, estruturada para responder à RFP do KubeBank, com base nas melhores práticas](#proposta-de-architecture-decision-record-adr-formal-estruturada-para-responder-à-rfp-do-kubebank-com-base-nas-melhores-práticas)
-- [ADR-001: Definição de Arquitetura de Segurança, Acesso e Observabilidade - CashFlow API](#adr-001-definição-de-arquitetura-de-segurança-acesso-e-observabilidade---cashflow-api)
-  - [1. Decisão: Segurança da Cadeia de Suprimentos (Supply Chain)](#1-decisão-segurança-da-cadeia-de-suprimentos-supply-chain)
-    - [1.1. Imagem Base do Container](#11-imagem-base-do-container)
-    - [1.2. Scan de Vulnerabilidades no CI/CD](#12-scan-de-vulnerabilidades-no-cicd)
-    - [1.3. Assinatura e Integridade de Imagem](#13-assinatura-e-integridade-de-imagem)
-  - [2. Decisão: Estratégia de Acesso (Ingress \& TLS)](#2-decisão-estratégia-de-acesso-ingress--tls)
-    - [2.1. Exposição do Serviço](#21-exposição-do-serviço)
-    - [2.2. Gerenciamento de Certificados (TLS)](#22-gerenciamento-de-certificados-tls)
-    - [2.3. Objeto de Roteamento](#23-objeto-de-roteamento)
-  - [3. Decisão: Observabilidade Total](#3-decisão-observabilidade-total)
-    - [3.1. Descoberta de Métricas (Service Discovery)](#31-descoberta-de-métricas-service-discovery)
-    - [3.2. Alerting](#32-alerting)
-  - [4. Decisão: Resiliência e Disponibilidade](#4-decisão-resiliência-e-disponibilidade)
-    - [4.1. Gerenciamento de Memória (OOMKill)](#41-gerenciamento-de-memória-oomkill)
-    - [4.2. Probes (Health Checks)](#42-probes-health-checks)
-    - [Resumo Técnico da Implementação](#resumo-técnico-da-implementação)
+- [KUBEBANK - ARCHITECTURE DECISION RECORD (ADR)](#kubebank---architecture-decision-record-adr)
+  - [SEÇÃO 1: SEGURANÇA DA CADEIA DE SUPRIMENTOS](#seção-1-segurança-da-cadeia-de-suprimentos)
+    - [1.1. Decisão: Imagem Base do Container](#11-decisão-imagem-base-do-container)
+    - [1.2. Decisão: Pipeline de Segurança (CI/CD)](#12-decisão-pipeline-de-segurança-cicd)
+    - [1.3. Decisão: Integridade e Assinatura](#13-decisão-integridade-e-assinatura)
+  - [SEÇÃO 2: ESTRATÉGIA DE ACESSO](#seção-2-estratégia-de-acesso)
+    - [2.1. Decisão: Exposição do Serviço e Ingress Controller](#21-decisão-exposição-do-serviço-e-ingress-controller)
+    - [2.2. Decisão: Gerenciamento de Certificados (TLS)](#22-decisão-gerenciamento-de-certificados-tls)
+    - [2.3. Decisão: Objeto de Roteamento](#23-decisão-objeto-de-roteamento)
+  - [SEÇÃO 3: OBSERVABILIDADE TOTAL](#seção-3-observabilidade-total)
+    - [3.1. Decisão: Coleta de Métricas (Scraping)](#31-decisão-coleta-de-métricas-scraping)
+    - [3.2. Decisão: Alertas e Notificações](#32-decisão-alertas-e-notificações)
+  - [SEÇÃO 4: RESILIÊNCIA, DISPONIBILIDADE E GOVERNANÇA](#seção-4-resiliência-disponibilidade-e-governança)
+    - [4.1. Decisão: Governança de Recursos (Policy as Code)](#41-decisão-governança-de-recursos-policy-as-code)
+    - [4.2. Decisão: Probes e Health Checks](#42-decisão-probes-e-health-checks)
+- [Resumo Técnico da Implementação](#resumo-técnico-da-implementação)
+
+
+| Campo | Detalhes |
+| --- | --- |
+| **ID** | ADR-001 |
+| **Título** | Definição da Arquitetura de Segurança, Acesso, Observabilidade e Resiliência - CashFlow API |
+| **Status** | Aceito |
+| **Data** | 09 de Fevereiro de 2026 |
+| **Autores** | Time de Arquitetura Cloud Native |
+| **Contexto** | O projeto KubeBank necessita definir a arquitetura para a aplicação crítica `CashFlow API`. Este documento responde à Solicitação de Proposta Técnica (RFP) focando em segurança da cadeia de suprimentos (Supply Chain Security), modernização do Ingress com Traefik, observabilidade completa e governança de recursos via Policy-as-Code. |
+
+
+---
+
+## SEÇÃO 1: SEGURANÇA DA CADEIA DE SUPRIMENTOS
+
+**Contexto:** A imagem atual baseada em `ubuntu:latest` foi rejeitada pela segurança devido ao alto número de CVEs e superfície de ataque desnecessária.
+
+### 1.1. Decisão: Imagem Base do Container
+
+* **Escolha:** Utilizar imagens **Distroless** (Google) ou **Wolfi** (Chainguard).
+
+**Justificativa:**
+  * **Redução de Superfície de Ataque:** Estas imagens não contêm shell (`/bin/sh`, `/bin/bash`) nem gerenciadores de pacotes (`apt`, `apk`). Isso impede que atacantes instalem ferramentas ou executem comandos arbitrários caso explorem uma vulnerabilidade na aplicação.
+  * **Menos CVEs:** Por conterem apenas o estritamente necessário para o runtime (ex: JRE, glibc mínima), a quantidade de vulnerabilidades conhecidas é drasticamente menor que uma imagem OS completa como Ubuntu ou Alpine padrão.
+
+
+
+### 1.2. Decisão: Pipeline de Segurança (CI/CD)
+
+* **Escolha:** Implementar **Trivy** (Aqua Security).
+
+* **Justificativa:**
+  * O Trivy deve rodar no pipeline como um passo bloqueante ("Quality Gate"). Ele escaneia tanto o sistema operacional quanto as dependências de código (go.mod, pom.xml, package.json).
+  * **Política:** Se vulnerabilidades de nível `CRITICAL` ou `HIGH` forem encontradas e tiverem correção disponível, o build falha e a imagem não é enviada ao registry.
+
+
+
+### 1.3. Decisão: Integridade e Assinatura
+
+* **Escolha:** Utilizar **Cosign** (Projeto Sigstore).
+
+**Justificativa:**
+  * Garantia de procedência. A imagem será assinada criptograficamente no momento do push.
+  * No cluster, usaremos um Admission Controller para verificar essa assinatura. Isso impede que imagens maliciosas ou não autorizadas (que não passaram pelo pipeline do KubeBank) sejam implantadas.
+
 
 
 ---
 
-# ADR-001: Definição de Arquitetura de Segurança, Acesso e Observabilidade - CashFlow API
+## SEÇÃO 2: ESTRATÉGIA DE ACESSO
 
-* **Status:** Proposto
+**Contexto:** O Banco Central exige criptografia em trânsito (HTTPS). O antigo padrão de NGINX Ingress será substituído por uma alternativa mais moderna e segura.
 
-* **Data:** 07 de Fevereiro de 2026
+### 2.1. Decisão: Exposição do Serviço e Ingress Controller
 
-* **Contexto:** O projeto KubeBank necessita definir a arquitetura para a aplicação crítica `CashFlow API`. O foco é garantir a segurança da cadeia de suprimentos (Supply Chain Security), estabelecer uma estratégia robusta de Ingress com TLS, integrar com a stack de observabilidade existente (Prometheus) e garantir alta disponibilidade e resiliência dos Pods.
+* **Escolha:** Utilizar **Traefik Proxy** como Ingress Controller.
+
+**Justificativa:**
+  * **Segurança e Manutenção:** Diferente do NGINX Ingress (community) que teve falhas de segurança recentes e desafios de manutenção, o Traefik é ativamente mantido e seguro por padrão.
+  * **Recursos Nativos:** Suporte nativo a Middlewares (Rate Limiting, Circuit Breaker, Compressão) via CRDs, simplificando configurações complexas que antes exigiam annotations extensas.
+  * **Observabilidade:** Dashboard nativo para visualização de rotas e status dos backends.
+
+
+
+### 2.2. Decisão: Gerenciamento de Certificados (TLS)
+
+* **Escolha:** **Cert-Manager** integrado com Let's Encrypt.
+
+**Justificativa:**
+  * Automação total do ciclo de vida dos certificados TLS (emissão e renovação).
+  * O Cert-Manager cria os `Secrets` do Kubernetes contendo os certificados válidos, garantindo HTTPS sem intervenção manual.
+
+
+
+### 2.3. Decisão: Objeto de Roteamento
+
+* **Escolha:** **Ingress** (Padrão Kubernetes) ou **IngressRoute** (CRD do Traefik).
+
+**Justificativa:**
+  * Recomendamos o uso do CRD **IngressRoute** do Traefik para maior poder de configuração (middlewares, TCP/UDP routing).
+  * Este objeto define o roteamento baseado em *Host* (`api.kubebank.com`) e *Path* (`/cashflow`), encaminhando o tráfego para o Service da aplicação.
+
+
 
 ---
 
-## 1. Decisão: Segurança da Cadeia de Suprimentos (Supply Chain)
+## SEÇÃO 3: OBSERVABILIDADE TOTAL
 
-### 1.1. Imagem Base do Container
+**Contexto:** A equipe de Ops usa a stack Prometheus. É necessário garantir que métricas sejam coletadas tanto a nível de serviço quanto a nível de pod, e que alertas sejam disparados em caso de falha.
 
-**Decisão:** Utilizar imagens **Distroless** (Google) ou **Wolfi** (Chainguard).
+### 3.1. Decisão: Coleta de Métricas (Scraping)
 
-**Justificativa:**
-
-* A imagem `ubuntu:latest` contém um sistema operacional completo, incluindo gerenciadores de pacotes (apt), shells e binários desnecessários para a execução da aplicação, o que aumenta drasticamente a superfície de ataque e o número de CVEs (Vulnerabilidades e Exposições Comuns).
-* Imagens **Distroless** ou **Wolfi** contêm apenas a aplicação e suas dependências de runtime (ex: JRE, Python, Go libs). Elas não possuem shell (`/bin/sh`), impedindo que atacantes executem comandos arbitrários caso consigam explorar a aplicação. Isso atende ao requisito de "reduzir a superfície de ataque ao máximo".
-
-### 1.2. Scan de Vulnerabilidades no CI/CD
-
-**Decisão:** Implementar o **Trivy** (Aqua Security) no pipeline.
+* **Escolha:** Implementar **ambos**: **ServiceMonitor** E **PodMonitor**.
 
 **Justificativa:**
+  * **ServiceMonitor:** Coleta métricas através do endpoint do Service. Ideal para visualizar a saúde geral da aplicação e balanceamento de carga global.
+  * **PodMonitor:** Coleta métricas diretamente de cada Pod individualmente.
+  * *Por que ambos?* O `PodMonitor` é crucial para cenários de debug onde apenas *uma* réplica do pod está degradada (ex: memory leak em uma instância específica), algo que a média do ServiceMonitor poderia mascarar.
 
-* O Trivy é uma ferramenta abrangente que escaneia tanto vulnerabilidades no sistema operacional (OS packages) quanto dependências da aplicação (npm, pip, maven, go.mod).
-* Ele deve ser configurado como um "Quality Gate" no pipeline: se vulnerabilidades de nível CRITICAL ou HIGH forem encontradas, o build deve falhar, impedindo o deploy.
 
-### 1.3. Assinatura e Integridade de Imagem
 
-**Decisão:** Utilizar **Cosign** (parte do projeto Sigstore).
+
+
+### 3.2. Decisão: Alertas e Notificações
+
+* **Escolha:** Componente **Alertmanager** configurado via **PrometheusRule**.
 
 **Justificativa:**
+  * O **PrometheusRule** é um CRD que permite definir regras de alerta como código (Infrastructure as Code).
+  * Se uma métrica violar um limiar (ex: `rate(http_requests_total{status="500"}[5m]) > 1%`), o Prometheus dispara o alerta para o **Alertmanager**, que notificará a equipe via Slack/PagerDuty.
 
-* O Cosign permite assinar a imagem do container no momento do build (push) no registry.
-* No cluster Kubernetes, podemos usar um Admission Controller (como Kyverno ou OPA Gatekeeper) para verificar essa assinatura antes de permitir a criação do Pod. Isso garante que apenas imagens geradas e aprovadas pelo pipeline oficial do KubeBank sejam executadas.
+
 
 ---
 
-## 2. Decisão: Estratégia de Acesso (Ingress & TLS)
+## SEÇÃO 4: RESILIÊNCIA, DISPONIBILIDADE E GOVERNANÇA
 
-### 2.1. Exposição do Serviço
+**Contexto:** A aplicação é pesada na inicialização e consome muita memória. Precisamos garantir que ela não afete outros vizinhos e que o Kubernetes respeite seu tempo de boot.
 
-**Decisão:** Utilizar um **Ingress Controller** (NGINX).
+### 4.1. Decisão: Governança de Recursos (Policy as Code)
+
+* **Escolha:** Utilizar **Kyverno** para impor *Limits* e *Requests*.
+
 **Justificativa:**
+  * Para evitar OOMKill no nó (Node OOM), cada Pod deve ter seu "contrato" de memória definido.
+  * **Implementação:** Criaremos uma `ClusterPolicy` no Kyverno em modo `enforce`. Qualquer tentativa de deploy de um Pod sem `resources.requests` e `resources.limits` definidos será rejeitada automaticamente pela API do Kubernetes.
 
-* Utilizar um `Service` do tipo `LoadBalancer` para cada microserviço é custoso (um IP/LB por serviço) e difícil de gerenciar.
-* O **Ingress** atua como um roteador de borda inteligente, permitindo roteamento baseado em host (`api.kubebank.com`) e path (`/cashflow`).
-* O **NGINX Ingress Controller** é o padrão de mercado, estável e altamente performático para tráfego HTTP/HTTPS.
 
-### 2.2. Gerenciamento de Certificados (TLS)
 
-**Decisão:** Utilizar **Cert-Manager** com **Let's Encrypt**.
+### 4.2. Decisão: Probes e Health Checks
+
+* **Escolha:** **StartupProbe** e **ReadinessProbe** (Validados via **Kyverno**).
+
 **Justificativa:**
+  * **StartupProbe:** Configurado para tolerar a inicialização lenta (30s+). Ex: `failureThreshold: 30`, `periodSeconds: 2`. Impede que o Liveness mate o container durante o boot.
+  * **ReadinessProbe:** Garante que o tráfego só seja enviado quando a conexão com o banco estiver estabelecida.
+  * **Governança:** A mesma política do Kyverno exigirá a presença desses probes nos manifestos para garantir a resiliência desde o "Day 1".
 
-* O Banco Central exige criptografia em trânsito. Gerenciar certificados manualmente é propenso a erros e expiração.
-* O **Cert-Manager** é um operador nativo de Kubernetes que automatiza a emissão e renovação de certificados.
-* Configuraremos um `ClusterIssuer` (Let's Encrypt Production) para emitir certificados válidos automaticamente ao detectarmos uma anotação de TLS no recurso de Ingress.
 
-### 2.3. Objeto de Roteamento
-
-**Decisão:** Recurso **Ingress**.
-**Justificativa:**
-
-* O manifesto `Ingress` é onde definimos as regras: "Todo tráfego chegando em `api.kubebank.com/v1/cashflow` deve ser enviado para o Service `cashflow-api` na porta 8080".
 
 ---
 
-## 3. Decisão: Observabilidade Total
+# Resumo Técnico da Implementação
 
-### 3.1. Descoberta de Métricas (Service Discovery)
-
-**Decisão:** Criar um manifesto **ServiceMonitor**.
-**Justificativa:**
-
-* Como a equipe de Ops já utiliza o `Kube-Prometheus-Stack` (baseado no Prometheus Operator), a forma padrão de configurar o scrape é via CRDs (Custom Resource Definitions).
-* O **ServiceMonitor** instrui o Prometheus a monitorar um conjunto de Services Kubernetes (selecionados via `labels`, ex: `app: cashflow`) e raspar as métricas no endpoint `/metrics`.
-
-### 3.2. Alerting
-
-**Decisão:** **Alertmanager**.
-**Justificativa:**
-
-* O Prometheus coleta e armazena as métricas. Quando uma regra de alerta é disparada (ex: `HighErrorRate` ou `PodDown`), o Prometheus envia esse sinal para o **Alertmanager**.
-* O Alertmanager é responsável por desduplicar, agrupar e rotear esse alerta para o canal correto (Slack, Email, PagerDuty), garantindo que a equipe saiba que a aplicação está falhando.
-
----
-
-## 4. Decisão: Resiliência e Disponibilidade
-
-### 4.1. Gerenciamento de Memória (OOMKill)
-
-**Decisão:** Configurar **Requests** e **Limits** de Memória adequados.
-**Justificativa:**
-
-* O `OOMKill` ocorre quando o container tenta usar mais memória do que o limite permitido (cgroups).
-* Devemos analisar o consumo durante o boot (profiling). Se a aplicação precisa de 512Mi para subir, mas estabiliza em 256Mi, o `limit` deve ser superior a 512Mi (ex: `memory: 600Mi`) para acomodar o pico de inicialização sem ser morto pelo kernel.
-* *Configuração sugerida:* Definir `resources.requests.memory` (para agendamento garantido) e `resources.limits.memory` (para teto de consumo).
-
-### 4.2. Probes (Health Checks)
-
-**Decisão:** Implementar **StartupProbe** e **ReadinessProbe**.
-**Justificativa:**
-
-* **Problema:** A aplicação demora 30s para conectar ao DB.
-* **StartupProbe:** Configuraremos um `startupProbe` com um tempo total de falha > 30s (ex: `failureThreshold: 30` * `periodSeconds: 2`). Isso impede que o Kubernetes mate o container (via Liveness) enquanto ele ainda está inicializando.
-* **ReadinessProbe:** Configuraremos o `readinessProbe` para verificar a conexão com o banco. O Kubernetes **só enviará tráfego** (via Service/Ingress) quando este probe retornar sucesso (HTTP 200). Isso garante que nenhum usuário receba erros 500 durante os 30 segundos de inicialização.
-
----
-
-### Resumo Técnico da Implementação
-
-| Área | Tecnologia/Conceito Escolhido | Benefício Principal |
+| Área | Tecnologia/Conceito | Benefício Chave |
 | --- | --- | --- |
-| **Imagem Base** | Wolfi / Distroless | Redução drástica de CVEs (Segurança). |
-| **CI Security** | Trivy + Cosign | Bloqueio de vulnerabilidades e garantia de origem. |
-| **Ingress** | NGINX + Cert-Manager | Acesso externo seguro (HTTPS) e automatizado. |
-| **Metrics** | ServiceMonitor | Auto-discovery de métricas pelo Prometheus. |
-| **Alertas** | Alertmanager | Notificação de falhas e incidentes. |
-| **Probes** | Readiness & Startup | Zero-downtime deploy e proteção contra lentidão no boot. |
+| **Imagem Base** | Wolfi / Distroless | Segurança máxima (Zero-CVE base). |
+| **Ingress** | Traefik Proxy | Modernidade, segurança e Middlewares nativos. |
+| **Observabilidade** | ServiceMonitor + PodMonitor | Visão macro (serviço) e micro (pod/instância). |
+| **Alertas** | PrometheusRule | Alertas versionados como código. |
+| **Policy Engine** | Kyverno | Obrigatoriedade de Limits, Requests e Probes. |
+| **Security CI** | Trivy + Cosign | Scan de vulnerabilidades e Assinatura digital. |
