@@ -24,7 +24,7 @@
 | **Título** | Definição da Arquitetura de Segurança, Acesso, Observabilidade e Resiliência - CashFlow API |
 | **Status** | Aceito |
 | **Data** | 09 de Fevereiro de 2026 |
-| **Autores** | Time de Arquitetura Cloud Native |
+| **Autores** | Squad de Arquitetura Cloud Native (SWD/ARC-CN) |
 | **Contexto** | O projeto KubeBank necessita definir a arquitetura para a aplicação crítica `CashFlow API`. Este documento responde à Solicitação de Proposta Técnica (RFP) focando em segurança da cadeia de suprimentos (Supply Chain Security), modernização do Ingress com Traefik, observabilidade completa e governança de recursos via Policy-as-Code. |
 
 
