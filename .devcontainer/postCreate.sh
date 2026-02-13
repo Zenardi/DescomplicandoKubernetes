@@ -25,9 +25,22 @@ if ! command -v kubectl >/dev/null 2>&1; then
   sudo mv /tmp/kubectl /usr/local/bin/kubectl
 fi
 
+# helm (latest stable)
+if ! command -v helm >/dev/null 2>&1; then
+  curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+fi
+
 # Add kubectl alias to zsh config
 if [ -f "$HOME/.zshrc" ] && ! grep -q "^alias k='kubectl'$" "$HOME/.zshrc"; then
   echo "alias k='kubectl'" >> "$HOME/.zshrc"
+fi
+
+# Enable kubectl autocompletion for zsh (including alias k)
+if [ -f "$HOME/.zshrc" ] && ! grep -q "kubectl completion zsh" "$HOME/.zshrc"; then
+  cat >> "$HOME/.zshrc" <<'EOF'
+source <(kubectl completion zsh)
+compdef __start_kubectl k
+EOF
 fi
 
 # Create a default kind cluster if Docker is available and no cluster exists
