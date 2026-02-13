@@ -28,6 +28,7 @@
     ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.fontFamily": "MesloLGS NF",
         "workbench.colorTheme": "Dracula Theme",
         "workbench.iconTheme": "material-icon-theme",
         "terminal.integrated.profiles.linux": {
