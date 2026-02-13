@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
+export DOCKER_API_VERSION=1.43
 # Base tools for Oh My Zsh and kind
 sudo apt-get update
-sudo apt-get install -y --no-install-recommends zsh git curl ca-certificates
+sudo apt-get install -y --no-install-recommends zsh git curl wget ca-certificates
 
 # Oh My Zsh (unattended)
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
