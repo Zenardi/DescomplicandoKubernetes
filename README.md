@@ -441,10 +441,10 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 <summary class="summary">DAY-15 - Descomplicando Kyverno e as policies no K8s</summary>
 
 - [Descomplicando o Kubernetes](day-15/README.md#descomplicando-o-kubernetes)
-  - [DAY-13: Descomplicando Kyverno e as Policies no Kubernetes](day-15/README.md#day-13-descomplicando-kyverno-e-as-policies-no-kubernetes)
-  - [Conteúdo do Day-13](day-15/README.md#conteúdo-do-day-13)
+  - [DAY-15: Descomplicando Kyverno e as Policies no Kubernetes](day-15/README.md#day-15-descomplicando-kyverno-e-as-policies-no-kubernetes)
+  - [Conteúdo do Day-15](day-15/README.md#conteúdo-do-day-15)
   - [O que iremos ver hoje?](day-15/README.md#o-que-iremos-ver-hoje)
-  - [Inicio do Day-13](day-15/README.md#inicio-do-day-13)
+  - [Inicio do Day-15](day-15/README.md#inicio-do-day-15)
     - [Introdução ao Kyverno](day-15/README.md#introdução-ao-kyverno)
     - [Instalando o Kyverno](day-15/README.md#instalando-o-kyverno)
       - [Utilizando Helm](day-15/README.md#utilizando-helm)
@@ -475,7 +475,7 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
         - [Detalhes da Política](day-15/README.md#detalhes-da-política-5)
         - [Arquivo de Política](day-15/README.md#arquivo-de-política)
         - [Implementação e Efeitos](day-15/README.md#implementação-e-efeitos)
-  - [Final do Day-13](day-15/README.md#final-do-day-13)
+  - [Final do Day-15](day-15/README.md#final-do-day-15)
       - [Pontos-Chave Aprendidos](day-15/README.md#pontos-chave-aprendidos)
 
 </details>

@@ -1,13 +1,13 @@
 # Descomplicando o Kubernetes
-## DAY-13: Descomplicando Kyverno e as Policies no Kubernetes
+## DAY-15: Descomplicando Kyverno e as Policies no Kubernetes
 
-## Conteúdo do Day-13
+## Conteúdo do DAY-15
 
 - [Descomplicando o Kubernetes](#descomplicando-o-kubernetes)
-  - [DAY-13: Descomplicando Kyverno e as Policies no Kubernetes](#day-13-descomplicando-kyverno-e-as-policies-no-kubernetes)
-  - [Conteúdo do Day-13](#conteúdo-do-day-13)
+  - [DAY-15: Descomplicando Kyverno e as Policies no Kubernetes](#day-15-descomplicando-kyverno-e-as-policies-no-kubernetes)
+  - [Conteúdo do DAY-15](#conteúdo-do-day-15)
   - [O que iremos ver hoje?](#o-que-iremos-ver-hoje)
-  - [Inicio do Day-13](#inicio-do-day-13)
+  - [Inicio do DAY-15](#inicio-do-day-15)
     - [Introdução ao Kyverno](#introdução-ao-kyverno)
     - [Instalando o Kyverno](#instalando-o-kyverno)
       - [Utilizando Helm](#utilizando-helm)
@@ -38,7 +38,7 @@
         - [Detalhes da Política](#detalhes-da-política-5)
         - [Arquivo de Política](#arquivo-de-política)
         - [Implementação e Efeitos](#implementação-e-efeitos)
-  - [Final do Day-13](#final-do-day-13)
+  - [Final do DAY-15](#final-do-day-15)
       - [Pontos-Chave Aprendidos](#pontos-chave-aprendidos)
 
 ## O que iremos ver hoje?
@@ -60,7 +60,7 @@ Hoje, exploraremos as funcionalidades e aplicações do Kyverno, uma ferramenta 
 Ao final deste e-book, você terá uma compreensão abrangente do Kyverno e estará equipado com o conhecimento e as habilidades para implementá-lo efetivamente em seus próprios clusters Kubernetes. Este e-book é projetado tanto para iniciantes quanto para profissionais experientes, proporcionando informações valiosas e práticas para todos os níveis de expertise.
 
 
-## Inicio do Day-13
+## Inicio do DAY-15
 
 ### Introdução ao Kyverno
 
@@ -423,7 +423,7 @@ spec:
 Ao aplicar esta política, todos os Pods novos ou atualizados precisam ter limites de recursos claramente definidos, exceto aqueles no namespace `giropops`. Isso assegura uma melhor gestão de recursos e evita situações onde alguns Pods possam monopolizar recursos em detrimento de outros.
 
 
-## Final do Day-13 
+## Final do DAY-15 
 
 Ao longo deste artigo, exploramos as capacidades e funcionalidades do Kyverno, uma ferramenta inovadora e essencial para o gerenciamento de políticas em clusters Kubernetes. Compreendemos como o Kyverno simplifica e automatiza tarefas críticas relacionadas à segurança, conformidade e configuração, tornando-se um componente indispensável na administração de ambientes Kubernetes.
 
