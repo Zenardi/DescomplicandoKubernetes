@@ -437,6 +437,49 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 
 </details>
 
+<details>
+<summary class="summary">DAY-15 - Descomplicando Kyverno e as policies no K8s</summary>
+
+- [Descomplicando o Kubernetes](day-15/README.md#descomplicando-o-kubernetes)
+  - [DAY-13: Descomplicando Kyverno e as Policies no Kubernetes](day-15/README.md#day-13-descomplicando-kyverno-e-as-policies-no-kubernetes)
+  - [Conteúdo do Day-13](day-15/README.md#conteúdo-do-day-13)
+  - [O que iremos ver hoje?](day-15/README.md#o-que-iremos-ver-hoje)
+  - [Inicio do Day-13](day-15/README.md#inicio-do-day-13)
+    - [Introdução ao Kyverno](day-15/README.md#introdução-ao-kyverno)
+    - [Instalando o Kyverno](day-15/README.md#instalando-o-kyverno)
+      - [Utilizando Helm](day-15/README.md#utilizando-helm)
+    - [Verificando a Instalação](day-15/README.md#verificando-a-instalação)
+    - [Criando a nossa primeira Policy](day-15/README.md#criando-a-nossa-primeira-policy)
+    - [Mais exemplos de Policies](day-15/README.md#mais-exemplos-de-policies)
+      - [Exemplo de Política: Adicionar Label ao Namespace](day-15/README.md#exemplo-de-política-adicionar-label-ao-namespace)
+        - [Detalhes da Política](day-15/README.md#detalhes-da-política)
+        - [Arquivo de Política: `add-label-namespace.yaml`](day-15/README.md#arquivo-de-política-add-label-namespaceyaml)
+        - [Utilização da Política](day-15/README.md#utilização-da-política)
+      - [Exemplo de Política: Proibir Usuário Root](day-15/README.md#exemplo-de-política-proibir-usuário-root)
+        - [Detalhes da Política](day-15/README.md#detalhes-da-política-1)
+        - [Arquivo de Política: `disallow-root-user.yaml`](day-15/README.md#arquivo-de-política-disallow-root-useryaml)
+        - [Implementação e Efeito](day-15/README.md#implementação-e-efeito)
+      - [Exemplo de Política: Gerar ConfigMap para Namespace](day-15/README.md#exemplo-de-política-gerar-configmap-para-namespace)
+        - [Detalhes da Política](day-15/README.md#detalhes-da-política-2)
+        - [Arquivo de Política: `generate-configmap-for-namespace.yaml`](day-15/README.md#arquivo-de-política-generate-configmap-for-namespaceyaml)
+        - [Implementação e Utilidade](day-15/README.md#implementação-e-utilidade)
+      - [Exemplo de Política: Permitir Apenas Repositórios Confiáveis](day-15/README.md#exemplo-de-política-permitir-apenas-repositórios-confiáveis)
+        - [Detalhes da Política](day-15/README.md#detalhes-da-política-3)
+        - [Arquivo de Política: `registry-allowed.yaml`](day-15/README.md#arquivo-de-política-registry-allowedyaml)
+        - [Implementação e Impacto](day-15/README.md#implementação-e-impacto)
+        - [Exemplo de Política: Require Probes](day-15/README.md#exemplo-de-política-require-probes)
+        - [Detalhes da Política](day-15/README.md#detalhes-da-política-4)
+        - [Arquivo de Política: `require-probes.yaml`](day-15/README.md#arquivo-de-política-require-probesyaml)
+        - [Implementação e Impacto](day-15/README.md#implementação-e-impacto-1)
+      - [Exemplo de Política: Usando o Exclude](day-15/README.md#exemplo-de-política-usando-o-exclude)
+        - [Detalhes da Política](day-15/README.md#detalhes-da-política-5)
+        - [Arquivo de Política](day-15/README.md#arquivo-de-política)
+        - [Implementação e Efeitos](day-15/README.md#implementação-e-efeitos)
+  - [Final do Day-13](day-15/README.md#final-do-day-13)
+      - [Pontos-Chave Aprendidos](day-15/README.md#pontos-chave-aprendidos)
+
+</details>
+
 &nbsp;
 
 

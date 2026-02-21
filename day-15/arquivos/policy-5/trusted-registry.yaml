@@ -1,0 +1,19 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata: 
+  name: trusted-image-registries
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: trusted-registries
+      match:
+        resources:
+          kinds:
+            - Pod
+      validate:
+        message: "Only Chainguard images are allowed. Please use images from cgr.dev/chainguard."
+        pattern:
+          spec:
+            containers:
+              - name: "*"
+                image: "cgr.dev/chainguard/*"

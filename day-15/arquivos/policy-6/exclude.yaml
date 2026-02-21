@@ -1,0 +1,57 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-root-user
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: disallow-root-user
+      match:
+        resources:
+          kinds:
+            - Pod
+      exclude:
+        resources:
+          kinds:
+            - Pod
+          namespaces:
+            - development
+      validate:
+        message: "Running containers as root user is not allowed."
+        pattern:
+          spec:
+            containers:
+              - name: "*"
+                securityContext:
+                  runAsNonRoot: true
+
+---
+
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resources-limits
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: check-resources-limits
+      match:
+        resources:
+          kinds:
+            - Pod
+      exclude:
+        resources:
+          kinds:
+            - Pod
+          namespaces:
+            - development
+      validate:
+        message: "All containers must have resource limits defined."
+        pattern:
+          spec:
+            containers:
+            - name: "*"
+              resources:
+                limits:
+                  cpu: "?*"
+                  memory: "?*"

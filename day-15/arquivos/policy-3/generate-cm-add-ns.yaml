@@ -1,0 +1,20 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: generate-cm-add-ns
+spec:
+  rules:
+    - name: add-namespace-to-cm
+      match:
+        resources:
+          kinds:
+            - Namespace
+      generate:
+        apiVersion: v1
+        kind: ConfigMap
+        name: default-configmap
+        namespace: "{{request.object.metadata.name}}"
+        data:
+          data:
+            key: "This ConfigMap was generated for the Namespace {{request.object.metadata.name}}"
+            anotherKey: "This is another key in the generated ConfigMap for Namespace {{request.object.metadata.name}}"
