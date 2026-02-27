@@ -480,6 +480,22 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 
 </details>
 
+<details>
+<summary class="summary">DAY-16 - Descomplicando Taints, Labels, Toleration e Affinity no K8s</summary>
+
+- [Descomplicando o Kubernetes](day-16/README.md#descomplicando-o-kubernetes)
+  - [Day-16: Descomplicando Taints, Tolerations e Affinity](day-16/README.md#day-16-descomplicando-taints-tolerations-e-affinity)
+  - [Conteúdo do Day-16](day-16/README.md#conteúdo-do-day-16)
+    - [O que vamos ver no dia de hoje?](day-16/README.md#o-que-vamos-ver-no-dia-de-hoje)
+    - [O Nosso cluster de exemplo](day-16/README.md#o-nosso-cluster-de-exemplo)
+    - [O que são Taints?](day-16/README.md#o-que-são-taints)
+    - [O que são Tolerations?](day-16/README.md#o-que-são-tolerations)
+    - [O que são Affinity e Antiaffinity?](day-16/README.md#o-que-são-affinity-e-antiaffinity)
+    - [O Antiaffinity?](day-16/README.md#o-antiaffinity)
+    - [Final do Day-16](day-16/README.md#final-do-day-16)
+
+</details>
+
 &nbsp;
 
 
