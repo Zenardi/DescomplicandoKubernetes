@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-gpu
+spec:
+  selector:
+    matchLabels:
+      app: nginx-gpu
+  template:
+    metadata:
+      labels:
+        app: nginx-gpu
+    spec:
+      containers:
+      - name: nginx-gpu
+        image: nginx
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+        ports:
+        - containerPort: 80
+    tolerations:
+    - key: "gpu"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"

@@ -1,0 +1,47 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: kind-taints
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "node=control-plane"    
+- role: worker1
+  kubeadmConfigPatches:
+    - |
+      kind: JoinConfiguration
+      nodeRegistration:
+        kubeletExtraArgs:
+          register-with-taints: "application=app_1:NoSchedule"
+  labels:
+    region: us-east-1
+- role: worker2
+  kubeadmConfigPatches:
+    - |
+      kind: JoinConfiguration
+      nodeRegistration:
+        kubeletExtraArgs:
+          register-with-taints: "gpu=true:NoSchedule"
+  labels:
+    region: us-east-1
+- role: worker3
+  kubeadmConfigPatches:
+    - |
+      kind: JoinConfiguration
+      nodeRegistration:
+        kubeletExtraArgs:
+          register-with-taints: "my-taint=presence:NoSchedule"
+  labels:
+    region: sa-east-1
+- role: worker4
+  kubeadmConfigPatches:
+    - |
+      kind: JoinConfiguration
+      nodeRegistration:
+        kubeletExtraArgs:
+          register-with-taints: "my-taint=presence:NoSchedule"
+  labels:
+    region: sa-east-2

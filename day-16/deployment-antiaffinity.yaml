@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-gpu-antiaffinity
+spec:
+  selector:
+    matchLabels:
+      app: nginx-gpu-antiaffinity
+  template:
+    metadata:
+      labels:
+        app: nginx-gpu-antiaffinity
+    spec:
+      containers:
+      - name: nginx-gpu-antiaffinity
+        image: nginx
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+        ports:
+        - containerPort: 80
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app: nginx-gpu-antiaffinity
+          topologyKey: "region"
