@@ -496,6 +496,33 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 
 </details>
 
+<details>
+<summary class="summary">DAY-17 - Descomplicando Network Policy e o EKS</summary>
+
+- [Descomplicando o Kubernetes](day-17/README.md#descomplicando-o-kubernetes)
+  - [Day-17: Descomplicando Network Policies no Kubernetes](day-17/README.md#day-17-descomplicando-network-policies-no-kubernetes)
+  - [Conteúdo do Day-17](day-17/README.md#conteúdo-do-day-17)
+  - [O que iremos ver hoje?](day-17/README.md#o-que-iremos-ver-hoje)
+    - [O que são Network Policies?](day-17/README.md#o-que-são-network-policies)
+      - [Para que Servem as Network Policies?](day-17/README.md#para-que-servem-as-network-policies)
+      - [Conceitos Fundamentais: Ingress e Egress](day-17/README.md#conceitos-fundamentais-ingress-e-egress)
+      - [Como Funcionam as Network Policies?](day-17/README.md#como-funcionam-as-network-policies)
+      - [Ainda não é padrão](day-17/README.md#ainda-não-é-padrão)
+      - [Criando um Cluster EKS com Network Policies](day-17/README.md#criando-um-cluster-eks-com-network-policies)
+        - [Instalando o EKSCTL](day-17/README.md#instalando-o-eksctl)
+        - [Instalando o AWS CLI](day-17/README.md#instalando-o-aws-cli)
+        - [Criando o Cluster EKS](day-17/README.md#criando-o-cluster-eks)
+        - [Instalando o AWS VPC CNI Plugin](day-17/README.md#instalando-o-aws-vpc-cni-plugin)
+        - [Habilitando o Network Policy nas Configurações Avançadas do CNI](day-17/README.md#habilitando-o-network-policy-nas-configurações-avançadas-do-cni)
+      - [Instalando o Nginx Ingress Controller](day-17/README.md#instalando-o-nginx-ingress-controller)
+    - [Instalando um Nginx Ingress Controller](day-17/README.md#instalando-um-nginx-ingress-controller)
+      - [Nossa Aplicação de Exemplo](day-17/README.md#nossa-aplicação-de-exemplo)
+    - [Criando Regras de Network Policy](day-17/README.md#criando-regras-de-network-policy)
+      - [Ingress](day-17/README.md#ingress)
+      - [Egress](day-17/README.md#egress)
+
+</details>
+
 &nbsp;
 
 
