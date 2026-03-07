@@ -1,0 +1,117 @@
+kind: Namespace
+metadata:
+  name: giropops
+  
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: giropops-senhas
+  name: giropops-senhas
+  namespace: giropops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: giropops-senhas
+  template:
+    metadata:
+      labels:
+        app: giropops-senhas
+    spec:
+      containers:
+      - image: linuxtips/giropops-senhas:1.0
+        name: giropops-senhas
+        ports:
+        - containerPort: 5000
+        imagePullPolicy: Always
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: giropops-senhas
+  namespace: giropops
+spec:
+  selector:
+    app: giropops-senhas
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+  type: ClusterIP
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: redis
+  name: redis-deployment
+  namespace: giropops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - image: redis
+        name: redis
+        ports:
+          - containerPort: 6379
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: giropops
+spec:
+  selector:
+    app: redis
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+  type: ClusterIP
+
+--- 
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: giropops-ingress
+  namespace: giropops
+  annotations:
+    traefik.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: traefik
+  rules:
+    # Configura o host (/etc/hosts) para acessar a aplicação
+  - host: giropops-senhas.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: giropops-senhas
+            port:
+              number: 5000

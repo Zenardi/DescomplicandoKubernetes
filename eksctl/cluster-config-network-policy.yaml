@@ -1,0 +1,71 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: descomplicandok8s
+  region: us-east-2
+  version: "1.35" 
+
+iam:
+  withOIDC: true
+
+vpc:
+  nat:
+    gateway: Disable
+  clusterEndpoints:
+    publicAccess: true
+    privateAccess: true
+
+managedNodeGroups:
+  - name: ng-descomplicandok8s
+    instanceTypes: ["t3a.medium", "t3.medium"]
+    minSize: 1
+    maxSize: 3
+    desiredCapacity: 1
+    spot: true
+    amiFamily: Bottlerocket
+    
+    iam:
+      withAddonPolicies:
+        imageBuilder: true
+        autoScaler: true
+        ebs: true
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        
+  # Opcional: Node group com taints para workloads experimentais
+  # - name: ng-descomplicandok8s-taints
+  #   taints:
+  #     - key: "dedicated"
+  #       value: "experimental"
+  #       effect: "NoSchedule"
+  #   instanceTypes: ["t3a.medium", "t3.medium"]
+  #   minSize: 1
+  #   maxSize: 3
+  #   desiredCapacity: 1
+  #   spot: true
+  #   amiFamily: Bottlerocket
+    
+  #   iam:
+  #     withAddonPolicies:
+  #       imageBuilder: true
+  #       autoScaler: true
+  #       ebs: true
+  #     attachPolicyARNs:
+  #       - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+  #       - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+
+addons:
+  - name: vpc-cni
+    version: latest
+    configurationValues: |-
+      enableNetworkPolicy: "true"
+
+  - name: aws-ebs-csi-driver
+    version: latest
+
+  - name: coredns
+    version: latest
+
+  - name: kube-proxy
+    version: latest
