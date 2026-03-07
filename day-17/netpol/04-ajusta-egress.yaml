@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  # Nome da policy: libera somente trafego de DNS de saida.
+  name: allow-dns
+  # Namespace onde a policy sera aplicada.
+  namespace: giropops
+spec:
+  # Seleciona todos os pods do namespace giropops.
+  podSelector:
+    matchLabels: {}
+  # Esta policy controla apenas trafego de saida (egress).
+  policyTypes:
+  - Egress
+  egress:
+  # Permite saida apenas para o CoreDNS no namespace kube-system.
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+          matchLabels:
+            k8s-app: kube-dns
+    # Libera somente DNS via UDP porta 53.
+    ports:
+    - protocol: UDP
+      port: 53
