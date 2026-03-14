@@ -8,5 +8,6 @@
 *.key
 *.pub
 *.pem
+*.csr
 venv/
 __pycache__/
