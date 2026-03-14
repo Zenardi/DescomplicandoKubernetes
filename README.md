@@ -523,6 +523,37 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 
 </details>
 
+<details>
+<summary class="summary">DAY-18 - Descomplicando o RBAC no Kubernetes</summary>
+
+- [Descomplicando o Kubernetes](day-18/README.md#descomplicando-o-kubernetes)
+  - [Day-18: Descomplicando RBAC e controle de acesso no Kubernetes](day-18/README.md#day-18-descomplicando-rbac-e-controle-de-acesso-no-kubernetes)
+  - [Conteúdo do Day-18](day-18/README.md#conteúdo-do-day-18)
+  - [O que iremos ver hoje?](day-18/README.md#o-que-iremos-ver-hoje)
+  - [RBAC](day-18/README.md#rbac)
+    - [O que é RBAC?](day-18/README.md#o-que-é-rbac)
+    - [Primeiro exemplo de RBAC](day-18/README.md#primeiro-exemplo-de-rbac)
+      - [Criando um Usuário para acesso ao cluster](day-18/README.md#criando-um-usuário-para-acesso-ao-cluster)
+      - [Criando um Role para o nosso usuário](day-18/README.md#criando-um-role-para-o-nosso-usuário)
+      - [apiGroups](day-18/README.md#apigroups)
+      - [Recursos](day-18/README.md#recursos)
+      - [Verbos](day-18/README.md#verbos)
+      - [Criando a Role](day-18/README.md#criando-a-role)
+      - [Criando um RoleBinding para o nosso usuário](day-18/README.md#criando-um-rolebinding-para-o-nosso-usuário)
+      - [Adicionando o certificado do usuário no kubeconfig](day-18/README.md#adicionando-o-certificado-do-usuário-no-kubeconfig)
+      - [Acessando o cluster com o novo usuário](day-18/README.md#acessando-o-cluster-com-o-novo-usuário)
+      - [ClusterRole e ClusterRoleBinding](day-18/README.md#clusterrole-e-clusterrolebinding)
+      - [ClusterRole e ClusterRoleBinding para o usuário admin](day-18/README.md#clusterrole-e-clusterrolebinding-para-o-usuário-admin)
+      - [Removendo o usuário](day-18/README.md#removendo-o-usuário)
+    - [Utilizando Tokens para Service Accounts](day-18/README.md#utilizando-tokens-para-service-accounts)
+      - [Criando um Service Account](day-18/README.md#criando-um-service-account)
+      - [Criando um Secret para o Service Account](day-18/README.md#criando-um-secret-para-o-service-account)
+      - [Utilizando o Token do Service Account](day-18/README.md#utilizando-o-token-do-service-account)
+      - [Removendo o Service Account](day-18/README.md#removendo-o-service-account)
+  - [Final do Day-18](day-18/README.md#final-do-day-18)
+
+</details>
+
 &nbsp;
 
 
