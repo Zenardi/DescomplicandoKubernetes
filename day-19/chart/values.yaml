@@ -76,3 +76,10 @@ observability:
     metrics:
       enabled: "true"
       path: "/metrics"
+
+databases:
+  giropops-senhas:
+    mysql:
+      host: "mysql.svc.cluster.local"
+      port: 3306
+      name: "MyDB"

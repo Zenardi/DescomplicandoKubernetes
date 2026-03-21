@@ -1,0 +1,9 @@
+{{- range $component, $config := .Values.databases }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $component }}-database-config
+data:
+  app-config.yaml: | 
+    {{- toYaml $config | nindent 4 }}
+{{- end }}
