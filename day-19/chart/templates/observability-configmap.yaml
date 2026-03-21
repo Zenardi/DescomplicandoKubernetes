@@ -1,0 +1,9 @@
+{{- range $component, $config := .Values.observability }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $component }}-observability-config
+data:
+  app-config.json: | 
+    {{ toJson $config }}
+{{- end }}

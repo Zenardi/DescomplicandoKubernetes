@@ -1,0 +1,24 @@
+# Basic vind Cluster Configuration
+# This is a minimal configuration for getting started
+#
+# Note: In Docker mode, you need to define worker nodes explicitly.
+# Without nodes defined, kubectl get nodes will return "No resources found".
+
+experimental:
+  docker:
+    # Load balancer and registry proxy are enabled by default
+    
+    # Define at least one worker node
+    # Without this, no nodes will be created and kubectl get nodes will be empty
+    nodes:
+      - name: worker-1
+
+# Kubernetes version (optional, defaults to v1.34.0)
+# Specify via: controlPlane.distro.k8s.version
+controlPlane:
+  distro:
+    k8s:
+      version: "v1.34.0"  # or use image.tag for custom images
+
+# Create the cluster with:
+# vcluster create my-cluster -f basic-cluster.yaml
