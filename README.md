@@ -554,6 +554,48 @@ O foco do treinamento é capacitar a pessoa para trabalhar com Kubernetes de man
 
 </details>
 
+<details>
+<summary class="summary">DAY-19 - Descomplicando Helm</summary>
+
+- [Descomplicando o Kubernetes](day-19/README.md#descomplicando-o-kubernetes)
+  - [Day-19: Descomplicando Helm](day-19/README.md#day-19-descomplicando-helm)
+  - [Conteúdo do Day-19](day-19/README.md#conteúdo-do-day-19)
+  - [O que iremos ver hoje?](day-19/README.md#o-que-iremos-ver-hoje)
+    - [O que é o Helm?](day-19/README.md#o-que-é-o-helm)
+    - [O que é um Chart?](day-19/README.md#o-que-é-um-chart)
+    - [Criando o nosso primeiro Chart](day-19/README.md#criando-o-nosso-primeiro-chart)
+      - [Instalando o nosso Chart](day-19/README.md#instalando-o-nosso-chart)
+      - [Atualizando o nosso Chart](day-19/README.md#atualizando-o-nosso-chart)
+      - [Utilizando `range`  e o `if` no Helm](day-19/README.md#utilizando-range--e-o-if-no-helm)
+      - [Utilizando `default`, `toYaml` e `toJson` no Helm](day-19/README.md#utilizando-default-toyaml-e-tojson-no-helm)
+      - [O Que São Helpers no Helm?](day-19/README.md#o-que-são-helpers-no-helm)
+        - [Por Que Usar Helpers?](day-19/README.md#por-que-usar-helpers)
+        - [Criando o Nosso Primeiro Helper](day-19/README.md#criando-o-nosso-primeiro-helper)
+        - [Helpers Avançados: Exemplos Práticos](day-19/README.md#helpers-avançados-exemplos-práticos)
+          - [Exemplo 1: Controlando a Complexidade](day-19/README.md#exemplo-1-controlando-a-complexidade)
+          - [Exemplo 2: Personalização Baseada em Ambiente](day-19/README.md#exemplo-2-personalização-baseada-em-ambiente)
+        - [Melhores Práticas ao Usar Helpers](day-19/README.md#melhores-práticas-ao-usar-helpers)
+      - [Criando o `_helpers.tpl` da nossa App](day-19/README.md#criando-o-_helperstpl-da-nossa-app)
+        - [Passo 1: Criando o arquivo `_helpers.tpl`](day-19/README.md#passo-1-criando-o-arquivo-_helperstpl)
+          - [Labels](day-19/README.md#labels)
+          - [Resources](day-19/README.md#resources)
+          - [Ports](day-19/README.md#ports)
+      - [Passo 2: Refatorando `Deployments.yaml` e `Services.yaml`](day-19/README.md#passo-2-refatorando-deploymentsyaml-e-servicesyaml)
+          - [O nosso `Deployments.yaml`](day-19/README.md#o-nosso-deploymentsyaml)
+          - [O nosso `Services.yaml`](day-19/README.md#o-nosso-servicesyaml)
+      - [Passo 3: Refatorando os ConfigMaps](day-19/README.md#passo-3-refatorando-os-configmaps)
+        - [Atualizando o `_helpers.tpl`](day-19/README.md#atualizando-o-_helperstpl)
+        - [Refatorando `config-map-dp.yaml`](day-19/README.md#refatorando-config-map-dpyaml)
+        - [Refatorando `config-map-obs.yaml`](day-19/README.md#refatorando-config-map-obsyaml)
+      - [Criando um repositório de Helm Charts](day-19/README.md#criando-um-repositório-de-helm-charts)
+        - [Criando o repositório no Github](day-19/README.md#criando-o-repositório-no-github)
+        - [Inicializando o repositório](day-19/README.md#inicializando-o-repositório)
+        - [Configurando o GitHub Pages](day-19/README.md#configurando-o-github-pages)
+      - [Utilizando o nosso repositório de Helm Charts](day-19/README.md#utilizando-o-nosso-repositório-de-helm-charts)
+      - [O que vimos no dia de hoje](day-19/README.md#o-que-vimos-no-dia-de-hoje)
+
+</details>
+
 &nbsp;
 
 
