@@ -4,7 +4,7 @@ kind: Deployment
 metadata:
   name: {{ $component }}
   labels:
-    app: {{ $config.labels.app }}
+    {{- include "app.labels" $config | nindent 4 }}
 spec:
   replicas: {{ $config.replicas | default 2 }}
   selector:
@@ -13,7 +13,7 @@ spec:
   template:
     metadata:
       labels:
-        app: {{ $config.labels.app }}
+        {{- include "app.labels" $config | nindent 8 }}
     spec:
       containers:
       - name: {{ $component }}
