@@ -1,0 +1,60 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# TipsBank — Cluster kubeadm 1 CP + 2 Workers
+# CNI: Cilium | CRI: containerd | OS: Ubuntu 22.04 (jammy)
+#
+# IPs:
+#   controlplane  192.168.56.10
+#   worker1       192.168.56.11  (também será NFS server na etapa 1.5)
+#   worker2       192.168.56.12
+#
+# Uso:
+#   vagrant up                  → provisiona todo o cluster
+#   vagrant ssh controlplane    → acesso ao CP
+#   vagrant destroy -f          → destroy tudo
+
+NODES = [
+  { name: "controlplane", ip: "192.168.56.10", memory: 2048, cpus: 2 },
+  { name: "worker1",      ip: "192.168.56.11", memory: 2048, cpus: 2 },
+  { name: "worker2",      ip: "192.168.56.12", memory: 2048, cpus: 2 },
+].freeze
+
+Vagrant.configure("2") do |config|
+  config.vm.box             = "ubuntu/jammy64"
+  config.vm.box_check_update = false
+
+  NODES.each do |node|
+    config.vm.define node[:name] do |vm|
+      vm.vm.hostname = node[:name]
+      vm.vm.network "private_network", ip: node[:ip]
+
+      vm.vm.provider "virtualbox" do |vb|
+        vb.name   = "tipsbank-#{node[:name]}"
+        vb.memory = node[:memory]
+        vb.cpus   = node[:cpus]
+        # Necessário para o Cilium funcionar corretamente
+        vb.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
+      end
+
+      # Provisionamento comum a todos os nodes
+      vm.vm.provision "common",
+        type: "shell",
+        path: "scripts/provision-common.sh",
+        env:  { "NODE_IP" => node[:ip] }
+
+      # Provisionamento específico por papel
+      if node[:name] == "controlplane"
+        vm.vm.provision "controlplane",
+          type: "shell",
+          path: "scripts/provision-controlplane.sh",
+          env:  { "NODE_IP" => node[:ip] }
+      else
+        vm.vm.provision "worker",
+          type: "shell",
+          path: "scripts/provision-worker.sh",
+          env:  { "NODE_IP" => node[:ip], "NODE_NAME" => node[:name] }
+      end
+    end
+  end
+end

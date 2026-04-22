@@ -1,0 +1,102 @@
+# TipsBank - ambiente de desenvolvimento local.
+# Objetivo: permitir que o aluno rode a app INTEIRA antes de tocar em Kubernetes,
+# para entender o que ele vai ter que orquestrar.
+# Uso: docker compose up --build
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tipsbank-postgres
+    environment:
+      POSTGRES_USER: tipsbank
+      POSTGRES_PASSWORD: tipsbank
+      POSTGRES_DB: tipsbank
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tipsbank"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api-contas:
+    build:
+      context: ./apps/api-contas
+    image: tipsbank/api-contas:dev
+    container_name: tipsbank-api-contas
+    environment:
+      DB_URL: postgresql+psycopg://tipsbank:tipsbank@postgres:5432/tipsbank
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+
+  api-transacoes:
+    build:
+      context: ./apps/api-transacoes
+    image: tipsbank/api-transacoes:dev
+    container_name: tipsbank-api-transacoes
+    environment:
+      DB_URL: postgresql+psycopg://tipsbank:tipsbank@postgres:5432/tipsbank
+      CONTAS_URL: http://api-contas:8080
+      AUDITORIA_URL: http://auditoria:8080
+      APP_VERSION: v1
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api-contas:
+        condition: service_started
+    ports:
+      - "8082:8080"
+
+  # Init container: prepara o volume /data com dono nonroot (uid 65532)
+  # antes da auditoria subir. Em Kubernetes isso vira um initContainer real.
+  auditoria-init:
+    image: alpine:3.19
+    container_name: tipsbank-auditoria-init
+    command: ["sh", "-c", "mkdir -p /data && chown -R 65532:65532 /data"]
+    volumes:
+      - auditdata:/data
+
+  auditoria:
+    build:
+      context: ./apps/auditoria
+    image: tipsbank/auditoria:dev
+    container_name: tipsbank-auditoria
+    environment:
+      DATA_DIR: /data
+      LOG_LEVEL: INFO
+    volumes:
+      - auditdata:/data
+    depends_on:
+      auditoria-init:
+        condition: service_completed_successfully
+    ports:
+      - "8083:8080"
+
+  # Frontend (nginx unprivileged servindo a SPA + proxy reverso pras 3 APIs)
+  # Acesso em http://localhost:8080
+  web:
+    build:
+      context: ./apps/web
+    image: tipsbank/web:dev
+    container_name: tipsbank-web
+    depends_on:
+      api-contas:
+        condition: service_started
+      api-transacoes:
+        condition: service_started
+      auditoria:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
+  auditdata:

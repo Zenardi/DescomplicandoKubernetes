@@ -1,0 +1,17 @@
+I0422 18:15:09.043508    6972 version.go:261] remote version is much newer: v1.36.0; falling back to: stable-1.32
+[init] Using Kubernetes version: v1.32.13
+[preflight] Running pre-flight checks
+error execution phase preflight: [preflight] Some fatal errors occurred:
+	[ERROR Port-6443]: Port 6443 is in use
+	[ERROR Port-10259]: Port 10259 is in use
+	[ERROR Port-10257]: Port 10257 is in use
+	[ERROR FileAvailable--etc-kubernetes-manifests-kube-apiserver.yaml]: /etc/kubernetes/manifests/kube-apiserver.yaml already exists
+	[ERROR FileAvailable--etc-kubernetes-manifests-kube-controller-manager.yaml]: /etc/kubernetes/manifests/kube-controller-manager.yaml already exists
+	[ERROR FileAvailable--etc-kubernetes-manifests-kube-scheduler.yaml]: /etc/kubernetes/manifests/kube-scheduler.yaml already exists
+	[ERROR FileAvailable--etc-kubernetes-manifests-etcd.yaml]: /etc/kubernetes/manifests/etcd.yaml already exists
+	[ERROR Port-10250]: Port 10250 is in use
+	[ERROR Port-2379]: Port 2379 is in use
+	[ERROR Port-2380]: Port 2380 is in use
+	[ERROR DirAvailable--var-lib-etcd]: /var/lib/etcd is not empty
+[preflight] If you know what you are doing, you can make a check non-fatal with `--ignore-preflight-errors=...`
+To see the stack trace of this error execute with --v=5 or higher
