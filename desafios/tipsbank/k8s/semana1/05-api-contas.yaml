@@ -1,6 +1,16 @@
 # API de Contas — Deployment + ClusterIP Service
 # Namespace: tipsbank-contas (mesmo namespace do Postgres — usa short name)
 ---
+# ConfigMap com parâmetros não-sensíveis da api-contas
+# Nome distinto dos outros namespaces: contas-app-config
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: contas-app-config
+  namespace: tipsbank-contas
+data:
+  LOG_LEVEL: INFO
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,10 +28,7 @@ spec:
       labels:
         app: api-contas
     spec:
-      # imagePullSecrets:           # Descomente se as imagens forem privadas:
-      #   - name: dockerhub-credentials  # kubectl create secret docker-registry dockerhub-credentials ...
       initContainers:
-        # Aguarda o Postgres aceitar conexões antes de iniciar a API
         - name: wait-postgres
           image: busybox:1.36
           command: ['sh', '-c', 'until nc -zw3 postgres 5432; do echo "aguardando postgres..."; sleep 3; done']
@@ -34,10 +41,13 @@ spec:
             - name: DB_URL
               valueFrom:
                 secretKeyRef:
-                  name: postgres-credentials
+                  name: contas-db-secret
                   key: DB_URL
             - name: LOG_LEVEL
-              value: INFO
+              valueFrom:
+                configMapKeyRef:
+                  name: contas-app-config
+                  key: LOG_LEVEL
           livenessProbe:
             httpGet:
               path: /health/live
@@ -63,6 +73,7 @@ spec:
               memory: "128Mi"
             limits:
               memory: "256Mi"
+              cpu: "200m"
 ---
 apiVersion: v1
 kind: Service

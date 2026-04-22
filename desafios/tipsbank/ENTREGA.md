@@ -301,28 +301,40 @@ kill %1
 ## Etapa 1.5 — Pod multicontainer + ConfigMap/Secret
 
 ```bash
-# ✅ critério: pod com 2 containers (2/2)
+# ✅ critério: pod com 2 containers (2/2 Running)
 kubectl get pods -n tipsbank-transacoes
 
 POD_TX=$(kubectl get pod -n tipsbank-transacoes -l app=api-transacoes -o jsonpath='{.items[0].metadata.name}')
 echo "Pod: ${POD_TX}"
 
-# ✅ critério: describe mostra 2 containers
-kubectl describe pod ${POD_TX} -n tipsbank-transacoes | grep -A 20 "Containers:"
+# ✅ critério: describe mostra 2 containers (api-transacoes + log-forwarder)
+kubectl describe pod ${POD_TX} -n tipsbank-transacoes | grep -A 40 "Containers:"
 
-# ✅ critério: log-forwarder exibe logs estruturados da app
-kubectl logs -n tipsbank-transacoes -c log-forwarder ${POD_TX}
+# ✅ critério: variáveis via secretKeyRef e configMapKeyRef — NENHUM valor sensível inline
+kubectl get deployment api-transacoes -n tipsbank-transacoes -o yaml | grep -A 5 "valueFrom:"
 
-# ✅ critério: nenhuma variável sensível no YAML — tudo via secretKeyRef/configMapKeyRef
-kubectl get deployment api-transacoes -n tipsbank-transacoes -o yaml | grep -A 3 "valueFrom:"
+# ✅ Secrets com nomes distintos por namespace (não compartilhados)
+kubectl get secret contas-db-secret -n tipsbank-contas
+kubectl get secret transacoes-db-secret -n tipsbank-transacoes
 
-# Mostrar os Secrets (base64, não o valor em claro)
-kubectl get secret secret-db -n tipsbank-contas
-kubectl get secret secret-db -n tipsbank-transacoes
-
-# Mostrar os ConfigMaps
+# ✅ ConfigMaps com nomes distintos por namespace
 kubectl get configmap -A | grep tipsbank
-kubectl describe configmap configmap-app -n tipsbank-transacoes
+kubectl describe configmap contas-app-config -n tipsbank-contas
+kubectl describe configmap transacoes-app-config -n tipsbank-transacoes
+
+# Gerar tráfego para popular o log (transferência via API)
+kubectl port-forward -n tipsbank-transacoes svc/api-transacoes 18080:8080 &
+sleep 2
+curl -s -X POST http://localhost:18080/transferencias \
+  -H "Content-Type: application/json" \
+  -d '{"origem_id":"11111111-1111-1111-1111-111111111111","destino_id":"22222222-2222-2222-2222-222222222222","valor":5.0,"descricao":"demo etapa 1.5"}' | python3 -m json.tool
+kill %1
+
+# ✅ critério: sidecar log-forwarder exibe logs JSON estruturados da app
+# (verificar em AMBOS os pods — o tráfego pode ter ido para qualquer um)
+for pod in $(kubectl get pod -n tipsbank-transacoes -l app=api-transacoes -o jsonpath='{.items[*].metadata.name}'); do
+  echo "=== $pod ===" && kubectl logs -n tipsbank-transacoes "$pod" -c log-forwarder --tail=10
+done
 ```
 
 ---

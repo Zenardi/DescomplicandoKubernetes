@@ -1,15 +1,29 @@
-# API de Transações — Secret de DB + Deployment + ClusterIP Service
-# Namespace: tipsbank-transacoes (diferente do Postgres → usa FQDN)
+# API de Transações — pod multicontainer (app + sidecar log-forwarder)
+# Namespace: tipsbank-transacoes
+# Etapa 1.5: Secret renomeado (transacoes-db-secret ≠ contas-db-secret),
+#             ConfigMap para URLs não-sensíveis, sidecar compartilhando emptyDir de log.
 ---
-# Secret local com a DB_URL do Postgres (namespace diferente → FQDN obrigatório)
+# Secret com credencial sensível (DB_URL) — nome único: transacoes-db-secret
 apiVersion: v1
 kind: Secret
 metadata:
-  name: postgres-credentials
+  name: transacoes-db-secret
   namespace: tipsbank-transacoes
 type: Opaque
 stringData:
   DB_URL: "postgresql+psycopg://tipsbank:tipsbank@postgres.tipsbank-contas.svc.cluster.local:5432/tipsbank"
+---
+# ConfigMap com parâmetros não-sensíveis — nome único: transacoes-app-config
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: transacoes-app-config
+  namespace: tipsbank-transacoes
+data:
+  CONTAS_URL:    "http://api-contas.tipsbank-contas.svc.cluster.local:8080"
+  AUDITORIA_URL: "http://auditoria.tipsbank-auditoria.svc.cluster.local:8080"
+  LOG_LEVEL:     "INFO"
+  LOG_FILE:      "/var/log/app/app.log"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -28,8 +42,10 @@ spec:
       labels:
         app: api-transacoes
     spec:
-      # imagePullSecrets:
-      #   - name: dockerhub-credentials
+      # emptyDir compartilhado entre container principal e sidecar
+      volumes:
+        - name: log-volume
+          emptyDir: {}
       initContainers:
         - name: wait-postgres
           image: busybox:1.36
@@ -38,24 +54,44 @@ spec:
           image: busybox:1.36
           command: ['sh', '-c', 'until wget -qO- http://api-contas.tipsbank-contas.svc.cluster.local:8080/health/ready; do echo "aguardando api-contas..."; sleep 3; done']
       containers:
+        # ── Container principal ──────────────────────────────────────────────
         - name: api-transacoes
-          image: zenardi/tipsbank-api-transacoes:v1.1.0
+          image: zenardi/tipsbank-api-transacoes:v1.2.0
           ports:
             - containerPort: 8080
           env:
+            # Credencial sensível — via Secret
             - name: DB_URL
               valueFrom:
                 secretKeyRef:
-                  name: postgres-credentials
+                  name: transacoes-db-secret
                   key: DB_URL
+            # URLs e parâmetros não-sensíveis — via ConfigMap
             - name: CONTAS_URL
-              value: "http://api-contas.tipsbank-contas.svc.cluster.local:8080"
+              valueFrom:
+                configMapKeyRef:
+                  name: transacoes-app-config
+                  key: CONTAS_URL
             - name: AUDITORIA_URL
-              value: "http://auditoria.tipsbank-auditoria.svc.cluster.local:8080"
-            - name: APP_VERSION
-              value: "v1.0.0"
+              valueFrom:
+                configMapKeyRef:
+                  name: transacoes-app-config
+                  key: AUDITORIA_URL
             - name: LOG_LEVEL
-              value: INFO
+              valueFrom:
+                configMapKeyRef:
+                  name: transacoes-app-config
+                  key: LOG_LEVEL
+            - name: LOG_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: transacoes-app-config
+                  key: LOG_FILE
+            - name: APP_VERSION
+              value: "v1.2.0"
+          volumeMounts:
+            - name: log-volume
+              mountPath: /var/log/app
           livenessProbe:
             httpGet:
               path: /health/live
@@ -81,6 +117,24 @@ spec:
               memory: "128Mi"
             limits:
               memory: "256Mi"
+              cpu: "200m"
+
+        # ── Sidecar: log-forwarder ───────────────────────────────────────────
+        # Lê /var/log/app/app.log (escrito pelo container principal)
+        # e repassa para stdout — visível via `kubectl logs -c log-forwarder`
+        - name: log-forwarder
+          image: busybox:1.36
+          command: ['sh', '-c', 'until [ -f /var/log/app/app.log ]; do sleep 1; done; tail -F /var/log/app/app.log']
+          volumeMounts:
+            - name: log-volume
+              mountPath: /var/log/app
+          resources:
+            requests:
+              cpu: "5m"
+              memory: "16Mi"
+            limits:
+              memory: "32Mi"
+              cpu: "20m"
 ---
 apiVersion: v1
 kind: Service

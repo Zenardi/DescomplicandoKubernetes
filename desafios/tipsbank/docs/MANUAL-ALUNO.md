@@ -189,10 +189,10 @@ Você **vai** ter problema de imagem privada se usou registry privado. Use um Se
 
 ## Checkpoint Semana 1
 
-- [ ] Cluster kubeadm 3-nodes Ready
+- [X] Cluster kubeadm 3-nodes Ready
 - [X] 3 imagens Distroless, Trivy limpo, Cosign assinado
-- [ ] Apps rodando como 4 Deployments + 1 STS (postgres) nos 4 namespaces
-- [ ] ConfigMap + Secret + Pod multicontainer + EmptyDir funcionando
+- [X] Apps rodando como 4 Deployments + 1 STS (postgres) nos 4 namespaces
+- [X] ConfigMap + Secret + Pod multicontainer + EmptyDir funcionando
 - [ ] PV NFS servindo a auditoria com RWX
 
 ---

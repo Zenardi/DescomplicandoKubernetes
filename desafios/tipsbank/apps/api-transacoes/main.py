@@ -16,11 +16,18 @@ from sqlalchemy import Column, String, Numeric, DateTime, create_engine, func
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
-logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO"),
-    format='{"ts":"%(asctime)s","level":"%(levelname)s","service":"api-transacoes","msg":"%(message)s"}',
-)
+_LOG_FMT = '{"ts":"%(asctime)s","level":"%(levelname)s","service":"api-transacoes","msg":"%(message)s"}'
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format=_LOG_FMT)
 log = logging.getLogger("api-transacoes")
+
+# File handler — ativado quando LOG_FILE está definido (sidecar log-forwarder lê o arquivo)
+_LOG_FILE = os.getenv("LOG_FILE", "")
+if _LOG_FILE:
+    import pathlib
+    pathlib.Path(_LOG_FILE).parent.mkdir(parents=True, exist_ok=True)
+    _fh = logging.FileHandler(_LOG_FILE)
+    _fh.setFormatter(logging.Formatter(_LOG_FMT))
+    logging.getLogger().addHandler(_fh)
 
 DB_URL = os.getenv(
     "DB_URL",

@@ -48,7 +48,7 @@ spec:
           # Credenciais vêm do Secret (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB)
           envFrom:
             - secretRef:
-                name: postgres-credentials
+                name: contas-db-secret
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
