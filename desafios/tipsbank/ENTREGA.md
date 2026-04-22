@@ -14,7 +14,7 @@ export CP_IP="192.168.56.10"              # IP do control-plane
 export W1_IP="192.168.56.11"              # IP do worker1 (também será o NFS server)
 export W2_IP="192.168.56.12"              # IP do worker2
 export NFS_SERVER_IP="${W1_IP}"
-export KUBECONFIG=~/.kube/config
+export KUBECONFIG=~/Documents/develop/DescomplicandoKubernetes/desafios/tipsbank/vagrant/admin.conf
 ```
 
 ---
@@ -341,72 +341,96 @@ done
 
 ## Etapa 1.6 — PV NFS (RWX) para a auditoria
 
-### No worker1 (${W1_IP}) — preparar o servidor NFS
+### No worker1 — instalar e configurar NFS server
 
 ```bash
-# SSH para o worker1
-ssh ${W1_IP}
-
-# Instalar e configurar nfs-kernel-server
-sudo apt-get install -y nfs-kernel-server
-sudo mkdir -p /srv/nfs/auditoria
-sudo chown -R 65532:65532 /srv/nfs/auditoria
-sudo chmod 755 /srv/nfs/auditoria
-
-# Exportar o diretório
-echo "/srv/nfs/auditoria *(rw,sync,no_subtree_check,no_root_squash)" | sudo tee -a /etc/exports
-sudo exportfs -rav
-sudo systemctl enable nfs-kernel-server
-sudo systemctl restart nfs-kernel-server
+# O script setup-nfs-server.sh instala nfs-kernel-server, cria o diretório
+# /srv/nfs/auditoria (chown 65532:65532) e configura /etc/exports
+cd tipsbank/vagrant
+vagrant ssh worker1 -- sudo bash /vagrant/scripts/setup-nfs-server.sh
 
 # Verificar exportação
-showmount -e localhost
-exit  # voltar para a máquina local
+vagrant ssh worker1 -- showmount -e localhost
 ```
 
-### De volta à máquina local — aplicar manifests NFS
+### Instalar nfs-common nos demais nodes (necessário para o kubelet montar NFS)
+
+```bash
+vagrant ssh controlplane -- sudo apt-get install -y nfs-common
+vagrant ssh worker2      -- sudo apt-get install -y nfs-common
+# worker1 já tem via nfs-kernel-server
+```
+
+### Aplicar PV + PVC e atualizar Deployment
 
 ```bash
 cd tipsbank
 
-# Substituir IP do NFS server no PV
-sed -i "s|NFS_SERVER_IP|${NFS_SERVER_IP}|g" k8s/semana1/auditoria/03-nfs-pv.yaml
-
-# Criar PV e PVC
-kubectl apply -f k8s/semana1/auditoria/03-nfs-pv.yaml
-kubectl apply -f k8s/semana1/auditoria/04-nfs-pvc.yaml
-
 # ✅ critério: PV Bound ao PVC
-kubectl get pv,pvc -A | grep nfs
+kubectl apply -f k8s/semana1/09-nfs.yaml
+kubectl wait pvc/auditoria-nfs-pvc -n tipsbank-auditoria \
+  --for=jsonpath='{.status.phase}'=Bound --timeout=60s
+kubectl get pv,pvc -A | grep auditoria
 
-# Trocar o deployment da auditoria pela versão com PVC (3 réplicas)
-kubectl apply -f k8s/semana1/auditoria/05-auditoria-deployment-nfs.yaml
+# Atualizar auditoria: emptyDir → PVC NFS, replicas 2 → 3
+kubectl apply -f k8s/semana1/07-auditoria.yaml
 kubectl rollout status deployment/auditoria -n tipsbank-auditoria --timeout=120s
 
-# Verificar 3 réplicas rodando
+# ✅ critério: 3 réplicas Running
 kubectl get pods -n tipsbank-auditoria -o wide
+```
 
-# --- Disparar 10 transferências para gerar eventos ---
-kubectl port-forward -n tipsbank-transacoes svc/api-transacoes 8082:8080 &
+### Disparar 100 transferências e validar contagem de eventos
+
+```bash
+# Port-forward para api-transacoes
+kubectl port-forward -n tipsbank-transacoes svc/api-transacoes 18080:8080 &
 sleep 2
-for i in $(seq 1 10); do
-  curl -s -X POST http://localhost:8082/transferencias \
-    -H 'content-type: application/json' \
-    -d '{"origem_id":"11111111-1111-1111-1111-111111111111","destino_id":"22222222-2222-2222-2222-222222222222","valor":"1.00"}' | jq .id
+
+# 100 transferências alternando direção (evita zerar saldo)
+for i in $(seq 1 100); do
+  if [ $((i % 2)) -eq 0 ]; then
+    ORIGEM="11111111-1111-1111-1111-111111111111"
+    DESTINO="22222222-2222-2222-2222-222222222222"
+  else
+    ORIGEM="22222222-2222-2222-2222-222222222222"
+    DESTINO="11111111-1111-1111-1111-111111111111"
+  fi
+  curl -s -o /dev/null -X POST http://localhost:18080/transferencias \
+    -H "Content-Type: application/json" \
+    -d "{\"origem_id\":\"${ORIGEM}\",\"destino_id\":\"${DESTINO}\",\"valor\":1.0,\"descricao\":\"etapa-1.6-test-${i}\"}"
 done
 kill %1
 
-# ✅ critério: pods 1, 2 e 3 veem os mesmos arquivos
+# ✅ critério: os 3 pods veem o mesmo arquivo (API /arquivos — imagem distroless, sem ls)
 PODS=($(kubectl get pod -n tipsbank-auditoria -l app=auditoria -o jsonpath='{.items[*].metadata.name}'))
-for p in "${PODS[@]}"; do
-  echo "=== ${p} ==="
-  kubectl exec -n tipsbank-auditoria ${p} -- ls /data
+
+idx=0
+for pod in "${PODS[@]}"; do
+  PORT=$((19080 + idx))
+  kubectl port-forward -n tipsbank-auditoria "pod/${pod}" ${PORT}:8080 &
+  idx=$((idx + 1))
+done
+sleep 3
+
+idx=0
+for pod in "${PODS[@]}"; do
+  PORT=$((19080 + idx))
+  echo -n "${pod} arquivos: " && curl -s "http://localhost:${PORT}/arquivos"
+  echo ""
+  idx=$((idx + 1))
 done
 
-# ✅ critério: mesmas linhas nos 3 pods
-for p in "${PODS[@]}"; do
-  echo "=== ${p}: $(kubectl exec -n tipsbank-auditoria ${p} -- sh -c 'wc -l /data/*.jsonl 2>/dev/null') ==="
+# ✅ critério: mesma contagem de eventos nos 3 pods (NFS compartilhado)
+idx=0
+for pod in "${PODS[@]}"; do
+  PORT=$((19080 + idx))
+  COUNT=$(curl -s "http://localhost:${PORT}/eventos?limit=500" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+  echo "${pod}: ${COUNT} eventos"
+  idx=$((idx + 1))
 done
+
+kill $(jobs -p) 2>/dev/null; true
 ```
 
 ---

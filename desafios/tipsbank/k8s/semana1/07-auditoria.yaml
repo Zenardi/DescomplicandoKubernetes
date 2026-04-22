@@ -1,8 +1,8 @@
 # Auditoria — Deployment + ClusterIP Service
 # Namespace: tipsbank-auditoria
-# /data: emptyDir temporário (será NFS na etapa 1.6)
-# fsGroup 65532: garante permissão de escrita no emptyDir para o user nonroot
-#   (UID/GID 65532 da imagem Chainguard)
+# /data: PVC NFS RWX (auditoria-nfs-pvc) — etapa 1.6
+# fsGroup 65532: garante que o processo (UID 65532 / nonroot Chainguard) possa
+#   escrever nos arquivos criados pelo NFS mount (GID herdado via fsGroup)
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -12,7 +12,7 @@ metadata:
   labels:
     app: auditoria
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: auditoria
@@ -62,9 +62,11 @@ spec:
               memory: "64Mi"
             limits:
               memory: "128Mi"
+              cpu: "100m"
       volumes:
         - name: data
-          emptyDir: {}  # TODO etapa 1.6: virar NFS PVC
+          persistentVolumeClaim:
+            claimName: auditoria-nfs-pvc
 ---
 apiVersion: v1
 kind: Service

@@ -11,3 +11,4 @@
 *.csr
 venv/
 __pycache__/
+.vagrant

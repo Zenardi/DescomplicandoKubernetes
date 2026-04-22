@@ -1,0 +1,60 @@
+# NFS PersistentVolume + PersistentVolumeClaim para auditoria
+# Etapa 1.6: substitui o emptyDir temporário por volume compartilhado RWX
+#
+# PRÉ-REQUISITOS:
+#   - nfs-kernel-server rodando no worker1 (192.168.56.11)
+#   - /srv/nfs/auditoria exportado para 192.168.56.0/24
+#   - nfs-common instalado em todos os nodes do cluster
+#
+# Para instalar o NFS server:
+#   vagrant ssh worker1 -- sudo bash /vagrant/scripts/setup-nfs-server.sh
+#
+# Para instalar nfs-common nos demais nodes:
+#   vagrant ssh controlplane -- sudo apt-get install -y nfs-common
+#   vagrant ssh worker2      -- sudo apt-get install -y nfs-common
+---
+# PersistentVolume estático — tipo NFS
+# RWX: múltiplas réplicas da auditoria escrevem simultaneamente no mesmo volume
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: auditoria-nfs-pv
+  labels:
+    app: auditoria
+    type: nfs
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany   # RWX — obrigatório para múltiplas réplicas
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: 192.168.56.11   # IP do worker1 (NFS server)
+    path: /srv/nfs/auditoria
+  mountOptions:
+    - nfsvers=4.1
+    - hard
+    - timeo=600
+    - retrans=3
+---
+# PersistentVolumeClaim no namespace da auditoria
+# selector garante que só este PVC se ligue ao PV acima
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: auditoria-nfs-pvc
+  namespace: tipsbank-auditoria
+  labels:
+    app: auditoria
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  selector:
+    matchLabels:
+      app: auditoria
+      type: nfs
+  # storageClassName vazio = usa PV estático (sem StorageClass)
+  storageClassName: ""

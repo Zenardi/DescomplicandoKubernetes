@@ -394,3 +394,51 @@ pkg:apk/alpine/busybox@1.37.0-r14?os_name=alpine&os_version=3.21
   MEDIUM    1
   LOW       0
 ```
+
+---
+
+## Etapa 1.6 — PV NFS (RWX) e Locking de Arquivo Concorrente
+
+### Configuração do NFS
+
+| Item | Valor |
+|---|---|
+| Servidor NFS | worker1 — 192.168.56.11 |
+| Export path | `/srv/nfs/auditoria` |
+| Opções de export | `rw,sync,no_subtree_check,no_root_squash` |
+| NFS versão (mount) | NFSv4.1 (`nfsvers=4.1`) |
+| Mount options | `hard,timeo=600,retrans=3` |
+| PV | `auditoria-nfs-pv` — 5Gi, RWX, Retain |
+| PVC | `auditoria-nfs-pvc` (tipsbank-auditoria) — Bound |
+
+### Teste de escrita concorrente
+
+Após escalar a auditoria para **3 réplicas** (2 no worker2, 1 no worker1), foram disparadas
+100 transferências via api-transacoes. Cada transferência gera 1 evento de auditoria
+(`POST /eventos`), escrito com `open("a")` no arquivo diário `/data/eventos-YYYY-MM-DD.jsonl`.
+
+| Pod | Node | Eventos lidos via `GET /eventos?limit=500` |
+|---|---|---|
+| auditoria-74dc9885c-n2jkx | worker2 | 201 |
+| auditoria-74dc9885c-nzfvv | worker2 | 201 |
+| auditoria-74dc9885c-z8mfc | worker1 | 201 |
+
+> Os 201 eventos incluem testes das etapas anteriores + 100 da etapa 1.6.
+
+### Análise de locking NFS
+
+**Comportamento observado:** nenhuma linha corrompida ou duplicada detectada.
+Os 3 pods leram exatamente o mesmo número de eventos do arquivo compartilhado.
+
+**Por que funciona:** NFSv4.1 inclui suporte nativo a *byte-range locking* (RFC 5661).
+A operação `open("a")` do Python abre o arquivo em modo append; o kernel Linux combina
+o `O_APPEND` com o lock POSIX implícito do NFSv4.1, garantindo que cada write seja
+atômico do ponto de vista do arquivo — cada réplica escreve uma linha JSONL completa
+sem entrelaçamento com outras réplicas.
+
+**Opção `no_root_squash`:** necessária para que o processo `nonroot` (UID 65532 / Chainguard)
+possa criar e escrever no diretório exportado. O diretório `/srv/nfs/auditoria` no servidor
+foi pré-criado com `chown 65532:65532` para garantir permissão mesmo sem root.
+
+**Conclusão:** não foram observados conflitos de escrita. O NFS com `hard` mount e NFSv4.1
+é adequado para a carga de append sequencial deste serviço de auditoria.
