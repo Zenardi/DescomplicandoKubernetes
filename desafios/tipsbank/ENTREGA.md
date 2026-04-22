@@ -193,74 +193,106 @@ vagrant destroy -f && vagrant up
 
 ## Etapa 1.4 — Namespaces, Deployments, StatefulSet e Services
 
-> Assumindo que os manifests estão em k8s/semana1/
+> Manifests em `k8s/semana1/` — numerados de 00 a 08 para garantir ordem de apply.
+> Todos os `kubectl` assumem `KUBECONFIG` apontando para o cluster Vagrant.
+
+### PRÉ-REQUISITO: StorageClass default (para o PVC do Postgres)
+
+```bash
+# local-path-provisioner fornece StorageClass "local-path" com provisioning dinâmico
+kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.28/deploy/local-path-storage.yaml
+
+# Marcar como default
+kubectl patch storageclass local-path \
+  -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+
+# ✅ verificar: coluna DEFAULT mostra (default)
+kubectl get storageclass
+```
+
+### Deploy completo
 
 ```bash
 cd tipsbank
 
-# Substituir o placeholder do registry nos manifests
-sed -i "s|ghcr.io/SEU-USUARIO|${REGISTRY}|g" \
-  k8s/semana1/contas/05-api-contas-deployment.yaml \
-  k8s/semana1/transacoes/03-api-transacoes-deployment.yaml \
-  k8s/semana1/auditoria/01-auditoria-deployment.yaml \
-  k8s/semana1/web/02-web-deployment.yaml
-
-# Criar namespaces
+# 1. Namespaces
 kubectl apply -f k8s/semana1/00-namespaces.yaml
 kubectl get namespaces | grep tipsbank
 
-# Namespace contas: Secret, ConfigMaps, Postgres STS, api-contas
-kubectl apply -f k8s/semana1/contas/01-secret-db.yaml
-kubectl apply -f k8s/semana1/contas/02-configmap-init-sql.yaml
-kubectl apply -f k8s/semana1/contas/03-configmap-app.yaml
-kubectl apply -f k8s/semana1/contas/04-postgres-statefulset.yaml
-kubectl apply -f k8s/semana1/contas/05-api-contas-deployment.yaml
-kubectl apply -f k8s/semana1/contas/06-api-contas-service.yaml
+# 2. Secrets e ConfigMaps
+kubectl apply -f k8s/semana1/01-secret-db.yaml       # postgres-credentials em tipsbank-contas
+kubectl apply -f k8s/semana1/02-configmap-init-sql.yaml
+kubectl apply -f k8s/semana1/03-configmap-nginx.yaml  # nginx com FQDNs cross-namespace
 
-# Aguardar Postgres ficar Ready antes de subir as APIs
-kubectl rollout status statefulset/postgres -n tipsbank-contas --timeout=120s
+# 3. Postgres StatefulSet + Headless Service (aguardar Ready antes das APIs)
+kubectl apply -f k8s/semana1/04-postgres.yaml
+kubectl rollout status statefulset/postgres -n tipsbank-contas --timeout=180s
 
-# Namespace transacoes: Secret, ConfigMap, api-transacoes (com sidecar)
-kubectl apply -f k8s/semana1/transacoes/01-secret-db.yaml
-kubectl apply -f k8s/semana1/transacoes/02-configmap-app.yaml
-kubectl apply -f k8s/semana1/transacoes/03-api-transacoes-deployment.yaml
-kubectl apply -f k8s/semana1/transacoes/04-api-transacoes-service.yaml
+# 4. api-contas (mesmo namespace do postgres — initContainer espera pg)
+kubectl apply -f k8s/semana1/05-api-contas.yaml
+kubectl rollout status deployment/api-contas -n tipsbank-contas --timeout=180s
 
-# Namespace auditoria: deployment com emptyDir (temporário)
-kubectl apply -f k8s/semana1/auditoria/01-auditoria-deployment.yaml
-kubectl apply -f k8s/semana1/auditoria/02-auditoria-service.yaml
+# 5. api-transacoes (initContainers esperam postgres + api-contas ready)
+kubectl apply -f k8s/semana1/06-api-transacoes.yaml
+kubectl rollout status deployment/api-transacoes -n tipsbank-transacoes --timeout=180s
 
-# Namespace web: ConfigMap do nginx (com FQDNs inter-namespace), deployment, service
-kubectl apply -f k8s/semana1/web/01-configmap-nginx.yaml
-kubectl apply -f k8s/semana1/web/02-web-deployment.yaml
-kubectl apply -f k8s/semana1/web/03-web-service.yaml
+# 6. auditoria (emptyDir por enquanto — etapa 1.6 vira NFS)
+kubectl apply -f k8s/semana1/07-auditoria.yaml
+kubectl rollout status deployment/auditoria -n tipsbank-auditoria --timeout=120s
 
-# Aguardar todos subirem
-kubectl rollout status deployment/api-contas     -n tipsbank-contas    --timeout=120s
-kubectl rollout status deployment/api-transacoes -n tipsbank-transacoes --timeout=120s
-kubectl rollout status deployment/auditoria      -n tipsbank-auditoria  --timeout=120s
-kubectl rollout status deployment/web            -n tipsbank-web        --timeout=120s
+# 7. web (nginx com ConfigMap sobrepondo nginx.conf da imagem)
+kubectl apply -f k8s/semana1/08-web.yaml
+kubectl rollout status deployment/web -n tipsbank-web --timeout=120s
+```
 
-# ✅ critério: todos os pods Running (2/2 para deployments, 1/1 para STS)
+### Verificação
+
+```bash
+# ✅ critério: todos os pods Running (2/2 deployments, 1/1 STS)
 kubectl get pods -A | grep tipsbank
 
-# ✅ critério: services criados
+# ✅ critério: services criados em todos os namespaces
 kubectl get svc -A | grep tipsbank
 
-# --- Testar via port-forward ---
+# ✅ critério: PVC do postgres Bound
+kubectl get pvc -n tipsbank-contas
 
-# Teste da api-transacoes (transferência)
+# ✅ critério: env vars sensíveis via secretKeyRef (não em texto plano)
+kubectl get deployment api-contas -n tipsbank-contas -o jsonpath='{.spec.template.spec.containers[0].env}' | jq
+```
+
+### Testes via port-forward
+
+```bash
+# --- Teste da api-contas ---
+kubectl port-forward -n tipsbank-contas svc/api-contas 8081:8080 &
+sleep 2
+# ✅ critério: login seed funciona
+curl -s -X POST http://localhost:8081/login \
+  -H 'content-type: application/json' \
+  -d '{"documento":"12345678901","senha":"giropops"}' | jq
+kill %1
+
+# --- Teste da api-transacoes (transferência) ---
 kubectl port-forward -n tipsbank-transacoes svc/api-transacoes 8082:8080 &
 sleep 2
+# ✅ critério: transferência entre contas seed retorna 201
 curl -s -X POST http://localhost:8082/transferencias \
   -H 'content-type: application/json' \
   -d '{"origem_id":"11111111-1111-1111-1111-111111111111","destino_id":"22222222-2222-2222-2222-222222222222","valor":"50.00"}' | jq
-kill %1  # encerrar o port-forward
+kill %1
 
-# ✅ critério: SPA abre no browser
+# --- Teste da auditoria ---
+kubectl port-forward -n tipsbank-auditoria svc/auditoria 8083:8080 &
+sleep 2
+# ✅ critério: evento da transferência aparece no log
+curl -s http://localhost:8083/eventos | jq
+kill %1
+
+# --- Teste do frontend ---
 kubectl port-forward -n tipsbank-web svc/web 8080:8080 &
-echo "Abrir http://localhost:8080 no browser — login com CPF 12345678901 / senha giropops"
-# (parar manualmente após mostrar no browser)
+echo "✅ Abrir http://localhost:8080 no browser — login: CPF 12345678901 / senha giropops"
+# (parar manualmente após demonstrar no browser)
 kill %1
 ```
 

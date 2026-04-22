@@ -1,0 +1,82 @@
+# Auditoria — Deployment + ClusterIP Service
+# Namespace: tipsbank-auditoria
+# /data: emptyDir temporário (será NFS na etapa 1.6)
+# fsGroup 65532: garante permissão de escrita no emptyDir para o user nonroot
+#   (UID/GID 65532 da imagem Chainguard)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auditoria
+  namespace: tipsbank-auditoria
+  labels:
+    app: auditoria
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auditoria
+  template:
+    metadata:
+      labels:
+        app: auditoria
+    spec:
+      # imagePullSecrets:
+      #   - name: dockerhub-credentials
+      securityContext:
+        fsGroup: 65532  # equivalente ao auditoria-init do docker-compose
+      containers:
+        - name: auditoria
+          image: zenardi/tipsbank-auditoria:v1.1.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATA_DIR
+              value: /data
+            - name: LOG_LEVEL
+              value: INFO
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: 8080
+            failureThreshold: 10
+            periodSeconds: 3
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "64Mi"
+            limits:
+              memory: "128Mi"
+      volumes:
+        - name: data
+          emptyDir: {}  # TODO etapa 1.6: virar NFS PVC
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auditoria
+  namespace: tipsbank-auditoria
+  labels:
+    app: auditoria
+spec:
+  selector:
+    app: auditoria
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

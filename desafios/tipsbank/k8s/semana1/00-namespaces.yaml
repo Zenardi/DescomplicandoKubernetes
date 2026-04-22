@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tipsbank-contas
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tipsbank-transacoes
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tipsbank-auditoria
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tipsbank-web

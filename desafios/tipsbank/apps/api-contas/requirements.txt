@@ -2,6 +2,6 @@ fastapi>=0.115.4
 uvicorn[standard]==0.30.6
 sqlalchemy==2.0.35
 psycopg[binary]==3.2.13
-pydantic==2.9.2
+pydantic>=2.9.2
 prometheus-client==0.20.0
 bcrypt==4.2.0

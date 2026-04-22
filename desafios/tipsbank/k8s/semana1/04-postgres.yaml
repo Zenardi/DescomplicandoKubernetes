@@ -1,0 +1,87 @@
+# Postgres — Headless Service + StatefulSet
+# Namespace: tipsbank-contas
+#
+# PRÉ-REQUISITO: StorageClass default disponível no cluster.
+# Para lab kubeadm, instale o local-path-provisioner:
+#   kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.28/deploy/local-path-storage.yaml
+#   kubectl patch storageclass local-path -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+---
+# Headless Service: permite que o StatefulSet registre DNS postgres-0.postgres.tipsbank-contas.svc.cluster.local
+# e que outros pods resolvam "postgres" dentro do mesmo namespace.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: tipsbank-contas
+  labels:
+    app: postgres
+spec:
+  clusterIP: None  # headless — Day-7
+  selector:
+    app: postgres
+  ports:
+    - name: pg
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: tipsbank-contas
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          # Credenciais vêm do Secret (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB)
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init-sql
+              mountPath: /docker-entrypoint-initdb.d/
+              readOnly: true
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "tipsbank", "-d", "tipsbank"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "tipsbank", "-d", "tipsbank"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              memory: "512Mi"
+      volumes:
+        - name: init-sql
+          configMap:
+            name: postgres-init-sql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi
+        # storageClassName omitido → usa a StorageClass default do cluster

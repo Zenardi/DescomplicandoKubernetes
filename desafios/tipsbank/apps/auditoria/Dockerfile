@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1.7
 
-FROM python:3.11-slim-bookworm AS builder
+FROM cgr.dev/chainguard/python:latest-dev AS builder
 
+USER root
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir --target=/packages -r requirements.txt
+RUN pip3 install --no-cache-dir --target=/packages -r requirements.txt
 
 COPY main.py .
 
