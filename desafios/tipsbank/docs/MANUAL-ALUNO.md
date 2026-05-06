@@ -335,7 +335,7 @@ Você **vai** ter problema de imagem privada se usou registry privado. Use um Se
 
 - [X] Ingress Nginx com 3 hosts + HTTPS válido
 - [X] Rate limit, Auth e Affinity Cookie funcionando
-- [ ] Cluster EKS paralelo com a app rodando
+- [X] Cluster EKS paralelo com a app rodando
 - [X] Canary 90/10 entre v1 e v2 de transações
 - [X] NetworkPolicy zero-trust em 3 namespaces
 
