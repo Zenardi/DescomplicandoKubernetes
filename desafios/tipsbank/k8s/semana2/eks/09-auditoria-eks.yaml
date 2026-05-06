@@ -1,0 +1,73 @@
+# Auditoria — adaptação para EKS (substitui 09-nfs.yaml da semana1)
+# Etapa 2.3: Replicação em EKS
+#
+# Diferença: usa emptyDir em vez de NFS RWX.
+# No EKS não há servidor NFS local; EFS seria necessário para RWX persistente.
+# Para este lab, emptyDir é suficiente para demonstrar portabilidade dos manifests.
+#
+# Consequência: dados de auditoria não persistem entre reinicializações de pods.
+# Solução de produção: Amazon EFS com access-points por réplica.
+#
+# APLICAR NO CONTEXTO EKS:
+#   kubectl --context eks-tipsbank apply -f k8s/semana2/eks/09-auditoria-eks.yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auditoria
+  namespace: tipsbank-auditoria
+  labels:
+    app: auditoria
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auditoria
+  template:
+    metadata:
+      labels:
+        app: auditoria
+    spec:
+      securityContext:
+        fsGroup: 65532
+      containers:
+        - name: auditoria
+          image: zenardi/tipsbank-auditoria:v1.1.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATA_DIR
+              value: /data
+            - name: LOG_LEVEL
+              value: INFO
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: 8080
+            failureThreshold: 10
+            periodSeconds: 3
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "64Mi"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+      volumes:
+        - name: data
+          emptyDir: {}

@@ -1,0 +1,53 @@
+# cert-manager — CA própria para TLS do TipsBank
+# Etapa 2.2: HTTPS com cert-manager (self-signed CA para lab local)
+#
+# PRÉ-REQUISITO: cert-manager instalado:
+#   helm upgrade --install cert-manager cert-manager \
+#     --repo https://charts.jetstack.io \
+#     --namespace cert-manager --create-namespace \
+#     --set crds.enabled=true
+#
+# Estratégia em 3 passos:
+#   1. ClusterIssuer selfSigned  → assina o certificado da CA
+#   2. Certificate tipsbank-ca   → CA do laboratório (isCA: true)
+#   3. ClusterIssuer tipsbank-ca-issuer → assina todos os certificados dos Ingresses
+---
+# Passo 1: Emissor auto-assinado (apenas para bootstrap da CA)
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-bootstrap
+spec:
+  selfSigned: {}
+---
+# Passo 2: Certificado raiz da CA do TipsBank
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tipsbank-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: TipsBank Lab CA
+  subject:
+    organizations:
+      - TipsBank
+  secretName: tipsbank-ca-secret
+  duration: 87600h  # 10 anos
+  renewBefore: 720h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-bootstrap
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# Passo 3: Emissor baseado na CA — usado pelos Ingresses
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: tipsbank-ca-issuer
+spec:
+  ca:
+    secretName: tipsbank-ca-secret

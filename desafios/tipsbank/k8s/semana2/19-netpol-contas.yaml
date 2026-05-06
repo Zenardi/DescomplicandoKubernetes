@@ -1,0 +1,137 @@
+# NetworkPolicies — tipsbank-contas
+# Etapa 2.5: Zero-trust networking
+#
+# Pods neste namespace: api-contas (app: api-contas), postgres (app: postgres)
+#
+# Fluxos permitidos:
+#   → api-contas recebe de: ingress-nginx (externo) + api-transacoes (orquestração)
+#   → postgres  recebe de:  api-contas (mesmo namespace) + api-transacoes (namespace tipsbank-transacoes)
+#   → api-contas envia para: postgres:5432 (mesmo namespace)
+#   → Todos:    DNS via kube-system
+#
+# Nota: api-transacoes usa a mesma instância postgres para o DB de transações
+---
+# 1. Bloqueia TUDO por padrão
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: tipsbank-contas
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# 2. api-contas recebe do Ingress Controller e de api-transacoes
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-contas-ingress
+  namespace: tipsbank-contas
+spec:
+  podSelector:
+    matchLabels:
+      app: api-contas
+  policyTypes:
+    - Ingress
+  ingress:
+    # Do Ingress Controller (acesso externo via api.tipsbank.local/contas)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8080
+          protocol: TCP
+    # De api-transacoes (débito/crédito durante transferências)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tipsbank-transacoes
+      ports:
+        - port: 8080
+          protocol: TCP
+    # De tipsbank-web (nginx proxy: /api/contas/*)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tipsbank-web
+      ports:
+        - port: 8080
+          protocol: TCP
+---
+# 3. postgres recebe de api-contas (mesmo namespace) e api-transacoes (namespace externo)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-ingress
+  namespace: tipsbank-contas
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    # api-contas (mesmo namespace)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api-contas
+      ports:
+        - port: 5432
+          protocol: TCP
+    # api-transacoes (namespace separado — DB de transações compartilhado)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tipsbank-transacoes
+      ports:
+        - port: 5432
+          protocol: TCP
+---
+# 4. api-contas pode enviar para postgres (mesmo namespace)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-contas-egress-postgres
+  namespace: tipsbank-contas
+spec:
+  podSelector:
+    matchLabels:
+      app: api-contas
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - port: 5432
+          protocol: TCP
+---
+# 5. DNS para todos os pods do namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-dns
+  namespace: tipsbank-contas
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP

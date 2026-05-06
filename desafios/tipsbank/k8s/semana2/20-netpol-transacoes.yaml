@@ -1,0 +1,111 @@
+# NetworkPolicies — tipsbank-transacoes
+# Etapa 2.5: Zero-trust networking
+#
+# Pods neste namespace: api-transacoes v1 + v2 (canary)
+#
+# Fluxos permitidos:
+#   → api-transacoes recebe de: ingress-nginx (externo)
+#   → api-transacoes envia para: api-contas:8080 (débito/crédito)
+#                                postgres:5432 (tipsbank-contas, DB de transacoes)
+#                                auditoria:8080 (eventos)
+#   → Todos: DNS via kube-system
+---
+# 1. Bloqueia TUDO por padrão
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: tipsbank-transacoes
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# 2. api-transacoes (v1 e v2) recebe do Ingress Controller
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-transacoes-ingress
+  namespace: tipsbank-transacoes
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8080
+          protocol: TCP
+---
+# 3. Egress para apis dependentes e banco de dados
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-transacoes-egress
+  namespace: tipsbank-transacoes
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    # api-contas: orquestração de débito/crédito
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tipsbank-contas
+          podSelector:
+            matchLabels:
+              app: api-contas
+      ports:
+        - port: 8080
+          protocol: TCP
+    # postgres: banco de dados de transacoes (em tipsbank-contas)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tipsbank-contas
+          podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - port: 5432
+          protocol: TCP
+    # auditoria: publicação de eventos pós-transferência
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tipsbank-auditoria
+          podSelector:
+            matchLabels:
+              app: auditoria
+      ports:
+        - port: 8080
+          protocol: TCP
+---
+# 4. DNS para todos os pods do namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-dns
+  namespace: tipsbank-transacoes
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP

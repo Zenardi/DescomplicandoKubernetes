@@ -1,0 +1,47 @@
+# Ingress Canary — 10% do tráfego /transacoes para api-transacoes-v2
+# Namespace: tipsbank-transacoes
+# Etapa 2.4: Canary Deployment via ingress-nginx
+#
+# O ingress-nginx divide o tráfego entre:
+#   90% → Ingress principal (12-ingress-transacoes.yaml) → api-transacoes:v1.2.0
+#   10% → Este Ingress canário                           → api-transacoes-v2:v2.0.0
+#
+# Verificar proporção:
+#   for i in $(seq 1 100); do
+#     curl -sk https://api.tipsbank.local/transacoes/health/live -u admin:giropops \
+#       -o /dev/null -w "%header{X-App-Version}\n"
+#   done | sort | uniq -c
+#   # Esperado: ~90 "v1.2.0" e ~10 "v2.0.0"
+#
+# Para rollback:
+#   kubectl delete ingress tipsbank-api-transacoes-canary -n tipsbank-transacoes
+#   kubectl delete deployment api-transacoes-v2 -n tipsbank-transacoes
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tipsbank-api-transacoes-canary
+  namespace: tipsbank-transacoes
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # Canary: 10% do tráfego desviado para api-transacoes-v2
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "10"
+    # Canary por header (para QA/testes forçados independente do peso):
+    # curl -H "X-Canary: always" https://api.tipsbank.local/transacoes/health/live
+    nginx.ingress.kubernetes.io/canary-by-header: "X-Canary"
+    nginx.ingress.kubernetes.io/canary-by-header-value: "always"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api.tipsbank.local
+      http:
+        paths:
+          - path: /transacoes(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: api-transacoes-v2
+                port:
+                  number: 8080

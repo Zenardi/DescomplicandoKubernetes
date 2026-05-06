@@ -193,7 +193,7 @@ Você **vai** ter problema de imagem privada se usou registry privado. Use um Se
 - [X] 3 imagens Distroless, Trivy limpo, Cosign assinado
 - [X] Apps rodando como 4 Deployments + 1 STS (postgres) nos 4 namespaces
 - [X] ConfigMap + Secret + Pod multicontainer + EmptyDir funcionando
-- [ ] PV NFS servindo a auditoria com RWX
+- [X] PV NFS servindo a auditoria com RWX
 
 ---
 
@@ -333,11 +333,11 @@ Você **vai** ter problema de imagem privada se usou registry privado. Use um Se
 
 ## Checkpoint Semana 2
 
-- [ ] Ingress Nginx com 3 hosts + HTTPS válido
-- [ ] Rate limit, Auth e Affinity Cookie funcionando
+- [X] Ingress Nginx com 3 hosts + HTTPS válido
+- [X] Rate limit, Auth e Affinity Cookie funcionando
 - [ ] Cluster EKS paralelo com a app rodando
-- [ ] Canary 90/10 entre v1 e v2 de transações
-- [ ] NetworkPolicy zero-trust em 3 namespaces
+- [X] Canary 90/10 entre v1 e v2 de transações
+- [X] NetworkPolicy zero-trust em 3 namespaces
 
 ---
 

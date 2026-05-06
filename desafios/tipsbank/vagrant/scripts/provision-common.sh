@@ -85,9 +85,15 @@ network:
     enp0s8:
       routes:
         - to: 10.96.0.0/12
-          via: 0.0.0.0
+          via: 192.168.56.10
           on-link: true
 EOF
+# Netplan exige permissão 600 — sem isso, ignora o arquivo silenciosamente
+chmod 600 /etc/netplan/99-k8s-routes.yaml
+# Corrigir também outros arquivos com permissão aberta (ex: 50-vagrant.yaml criado pelo Vagrant)
+chmod 600 /etc/netplan/*.yaml 2>/dev/null || true
 netplan apply 2>/dev/null || true
+# Garantir a rota no kernel mesmo se netplan falhar
+ip route replace 10.96.0.0/12 via 192.168.56.10 dev enp0s8 onlink 2>/dev/null || true
 
 echo ">>> [common] Provisionamento comum concluído (node: $(hostname), ip: ${NODE_IP})"

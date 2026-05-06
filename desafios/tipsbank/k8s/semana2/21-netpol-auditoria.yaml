@@ -1,0 +1,110 @@
+# NetworkPolicies — tipsbank-auditoria
+# Etapa 2.5: Zero-trust networking
+#
+# Pods neste namespace: auditoria (app: auditoria) — 3 réplicas
+#
+# Fluxos permitidos:
+#   → auditoria recebe de: ingress-nginx (externo) + api-transacoes (eventos)
+#   → auditoria envia para: NFS worker1 (192.168.56.11:2049) — apenas kubeadm local
+#                            DNS via kube-system
+#
+# Nota EKS: A regra NFS (ipBlock 192.168.56.11/32) não se aplica ao EKS,
+# pois auditoria usa emptyDir lá (eks/09-auditoria-eks.yaml).
+# No EKS não haverá tráfego para esse IP, então a regra é inócua.
+---
+# 1. Bloqueia TUDO por padrão
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: tipsbank-auditoria
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# 2. auditoria recebe do Ingress Controller e de api-transacoes
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-auditoria-ingress
+  namespace: tipsbank-auditoria
+spec:
+  podSelector:
+    matchLabels:
+      app: auditoria
+  policyTypes:
+    - Ingress
+  ingress:
+    # Do Ingress Controller (consulta de eventos via api.tipsbank.local/auditoria)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8080
+          protocol: TCP
+    # De api-transacoes (publicação de eventos pós-transferência)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tipsbank-transacoes
+      ports:
+        - port: 8080
+          protocol: TCP
+    # De tipsbank-web (nginx proxy: /api/auditoria/*)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tipsbank-web
+      ports:
+        - port: 8080
+          protocol: TCP
+---
+# 3. Egress para NFS (kubeadm local: worker1) — necessário para gravar eventos JSONL
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-auditoria-egress-nfs
+  namespace: tipsbank-auditoria
+spec:
+  podSelector:
+    matchLabels:
+      app: auditoria
+  policyTypes:
+    - Egress
+  egress:
+    # NFS v4.1 — apenas porta 2049 (sem portmapper necessário em NFSv4)
+    - to:
+        - ipBlock:
+            cidr: 192.168.56.11/32
+      ports:
+        - port: 2049
+          protocol: TCP
+        - port: 2049
+          protocol: UDP
+---
+# 4. DNS para todos os pods do namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-dns
+  namespace: tipsbank-auditoria
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP

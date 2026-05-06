@@ -1,0 +1,44 @@
+# Ingress — api.tipsbank.local/contas → api-contas (acesso externo direto)
+# Namespace: tipsbank-contas
+# Etapa 2.1: Exposição das APIs via Ingress Nginx
+# Etapa 2.2: TLS (âncora do host api.tipsbank.local) + Basic Auth
+#
+# Path rewriting: /contas/login  → /login
+#                  /contas/contas → /contas
+#                  /contas/health/live → /health/live
+#
+# Basic Auth — credenciais:  admin / giropops
+# Gerar novo hash: openssl passwd -apr1 -salt 'TipsBank0' 'giropops'
+#   e atualizar o Secret em 15-basic-auth-secret.yaml
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tipsbank-api-contas
+  namespace: tipsbank-contas
+  annotations:
+    # Rewrite: strip /contas do prefixo antes de encaminhar ao backend
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # Basic Auth em toda a rota /contas (acesso externo)
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: basic-auth-secret
+    # TLS: este Ingress ancora o certificado para api.tipsbank.local
+    cert-manager.io/cluster-issuer: tipsbank-ca-issuer
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.tipsbank.local
+      secretName: tipsbank-api-tls
+  rules:
+    - host: api.tipsbank.local
+      http:
+        paths:
+          - path: /contas(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: api-contas
+                port:
+                  number: 8080

@@ -1,0 +1,30 @@
+# Ingress — api.tipsbank.local/auditoria → auditoria
+# Namespace: tipsbank-auditoria
+# Etapa 2.1: Exposição via Ingress Nginx
+# Etapa 2.2: TLS herdado do host api.tipsbank.local
+#
+# Path rewriting: /auditoria/eventos → /eventos
+#                  /auditoria/arquivos → /arquivos
+#                  /auditoria/health/live → /health/live
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tipsbank-api-auditoria
+  namespace: tipsbank-auditoria
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api.tipsbank.local
+      http:
+        paths:
+          - path: /auditoria(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: auditoria
+                port:
+                  number: 8080
