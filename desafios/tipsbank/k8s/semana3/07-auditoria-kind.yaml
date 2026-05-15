@@ -1,0 +1,95 @@
+# Auditoria — versão KIND (replicas=1)
+#
+# Em KIND o PVC `auditoria-nfs-pvc` é RWO (local-path) em vez de RWX (NFS).
+# Com RWO, apenas 1 pod pode montar o volume — daí `replicas: 1`.
+# Em EKS, use o `07-auditoria.yaml` original (replicas=3 com NFS/EFS RWX).
+#
+# Pré-requisito: `k8s/semana1/09-nfs-kind.yaml` aplicado (cria o PVC RWO).
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auditoria
+  namespace: tipsbank-auditoria
+  labels:
+    app: auditoria
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auditoria
+  template:
+    metadata:
+      labels:
+        app: auditoria
+    spec:
+      securityContext:
+        fsGroup: 65532
+      containers:
+        - name: auditoria
+          image: zenardi/tipsbank-auditoria:v1.1.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATA_DIR
+              value: /data
+            - name: LOG_LEVEL
+              value: INFO
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 6
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "64Mi"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: auditoria-nfs-pvc
+      # AntiAffinity preferred fica sem efeito com 1 réplica, mas mantemos
+      # o bloco para paridade com o manifesto EKS (não atrapalha).
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: auditoria
+                topologyKey: kubernetes.io/hostname
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auditoria
+  namespace: tipsbank-auditoria
+  labels:
+    app: auditoria
+spec:
+  selector:
+    app: auditoria
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

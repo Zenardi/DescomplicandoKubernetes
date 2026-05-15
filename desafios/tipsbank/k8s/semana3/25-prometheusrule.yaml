@@ -1,0 +1,58 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: tipsbank-slo-alerts
+  namespace: tipsbank-monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: tipsbank.slo
+      interval: 30s
+      rules:
+
+        - alert: TipsBankApiDown
+          expr: up{job=~"tipsbank-contas/api-contas|tipsbank-transacoes/api-transacoes|tipsbank-auditoria/auditoria"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "API {{ $labels.job }} está down"
+            description: "Target {{ $labels.instance }} sem resposta há mais de 2 minutos."
+
+        - alert: TipsBankP99Alto
+          expr: |
+            histogram_quantile(0.99,
+              sum by (job, le) (
+                rate(http_request_duration_seconds_bucket{namespace=~"tipsbank-.*"}[5m])
+              )
+            ) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "P99 de latência acima de 500ms em {{ $labels.job }}"
+            description: "P99 atual = {{ $value | humanizeDuration }}"
+
+        - alert: TipsBankErroAltoApi
+          expr: |
+            (
+              sum by (job) (rate(http_requests_total{status=~"5..",namespace=~"tipsbank-.*"}[3m]))
+              /
+              sum by (job) (rate(http_requests_total{namespace=~"tipsbank-.*"}[3m]))
+            ) > 0.05
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Taxa de erros 5xx > 5% em {{ $labels.job }}"
+            description: "Taxa atual: {{ $value | humanizePercentage }}"
+
+        - alert: TipsBankPodCrashLoop
+          expr: increase(kube_pod_container_status_restarts_total{namespace=~"tipsbank-.*"}[10m]) > 3
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.pod }} em CrashLoop"
+            description: "{{ $value }} restarts nos últimos 10 minutos no namespace {{ $labels.namespace }}."

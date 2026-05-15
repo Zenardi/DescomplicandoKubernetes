@@ -1,0 +1,28 @@
+# PVC para a auditoria em ambiente KIND
+#
+# Substitui o `09-nfs.yaml` original (NFS server + PV RWX), que não funciona
+# em containers KIND porque o nfs-ganesha precisa de módulos NFS do kernel
+# do host (geralmente ausentes em Docker Desktop / rootless Docker).
+#
+# Diferenças vs 09-nfs.yaml:
+#   - Sem nfs-ganesha StatefulSet
+#   - Sem PV manual: usa a StorageClass `standard` (local-path) padrão do KIND
+#   - accessModes: ReadWriteOnce (local-path não suporta RWX)
+#
+# Consequência didática: a auditoria fica limitada a 1 réplica (ver
+# `k8s/semana3/07-auditoria-kind.yaml`). Em EKS, use o `09-nfs.yaml` original
+# (NFS) ou troque por EFS CSI (RWX nativo da AWS).
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: auditoria-nfs-pvc
+  namespace: tipsbank-auditoria
+  labels:
+    app: auditoria
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 1Gi

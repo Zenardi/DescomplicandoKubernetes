@@ -1,0 +1,78 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana
+  namespace: tipsbank-monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: tipsbank-issuer
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - grafana.tipsbank.local
+      secretName: grafana-tls
+  rules:
+    - host: grafana.tipsbank.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-prometheus-stack-grafana
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus
+  namespace: tipsbank-monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: tipsbank-issuer
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - prometheus.tipsbank.local
+      secretName: prometheus-tls
+  rules:
+    - host: prometheus.tipsbank.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-prometheus-stack-prometheus
+                port:
+                  number: 9090
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: alertmanager
+  namespace: tipsbank-monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: tipsbank-issuer
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - alertmanager.tipsbank.local
+      secretName: alertmanager-tls
+  rules:
+    - host: alertmanager.tipsbank.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-prometheus-stack-alertmanager
+                port:
+                  number: 9093

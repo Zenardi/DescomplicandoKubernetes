@@ -523,13 +523,13 @@ Teste cada um provocando a condição (mate uma API, jogue carga pesada, etc.) e
 
 ## Checkpoint Semana 3
 
-- [ ] 3 probes em todas as APIs
-- [ ] Rollout strategy + rollback testado
-- [ ] AntiAffinity + Taints/Tolerations + QoS classes corretas
-- [ ] kube-prometheus-stack + 4 alertas disparando
-- [ ] 3 HPAs com métricas diferentes
-- [ ] Locust gerando 200 users, HPA reagindo
-- [ ] DaemonSet rodando em todos os workers
+- [X] 3 probes em todas as APIs
+- [X] Rollout strategy + rollback testado
+- [X] AntiAffinity + Taints/Tolerations + QoS classes corretas
+- [X] kube-prometheus-stack + 4 alertas disparando
+- [X] 3 HPAs com métricas diferentes
+- [X] Locust gerando 200 users, HPA reagindo
+- [X] DaemonSet rodando em todos os workers
 
 ---
 

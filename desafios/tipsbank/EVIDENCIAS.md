@@ -442,3 +442,724 @@ foi pré-criado com `chown 65532:65532` para garantir permissão mesmo sem root.
 
 **Conclusão:** não foram observados conflitos de escrita. O NFS com `hard` mount e NFSv4.1
 é adequado para a carga de append sequencial deste serviço de auditoria.
+
+---
+
+## Etapa 3.6 — PrometheusRule com Alertas de SLO
+
+> **Data**: _<YYYY-MM-DD>_
+> **Ferramenta**: kube-prometheus-stack (Prometheus Operator + Alertmanager)
+> **Manifesto**: `k8s/semana3/25-prometheusrule.yaml`
+> **Namespace**: `tipsbank-monitoring`
+> **Resultado**: _<resumo: ex. "4 alertas carregados, 3 disparados em teste controlado">_
+
+---
+
+### Alertas configurados
+
+| # | Alerta | Severidade | Trigger | Janela (`for`) |
+|---|---|---|---|---|
+| 1 | `TipsBankApiDown` | critical | `up{job=~"..."} == 0` | 2m |
+| 2 | `TipsBankP99Alto` | warning | P99 de `http_request_duration_seconds` > 500ms | 5m |
+| 3 | `TipsBankErroAltoApi` | critical | Taxa de erros 5xx > 5% | 3m |
+| 4 | `TipsBankPodCrashLoop` | warning | >3 restarts em 10 minutos | 5m |
+
+---
+
+### Validação — PrometheusRule carregada pelo Prometheus Operator
+
+```bash
+# 1. Objeto criado e reconhecido pelo operator
+kubectl get prometheusrule -n tipsbank-monitoring tipsbank-slo-alerts
+```
+
+```
+NAME                  AGE
+tipsbank-slo-alerts   3h18m
+```
+
+```bash
+# 2. Regras visíveis na API do Prometheus
+kubectl -n tipsbank-monitoring port-forward svc/kube-prometheus-stack-prometheus 9090:9090 &
+curl -s http://localhost:9090/api/v1/rules | jq '.data.groups[] | select(.name=="tipsbank.slo")'
+```
+
+```json
+{
+  "name": "tipsbank.slo",
+  "file": "/etc/prometheus/rules/prometheus-kube-prometheus-stack-prometheus-rulefiles-0/tipsbank-monitoring-tipsbank-slo-alerts-19544a96-9e45-456b-b1aa-9eb5a9a00d2e.yaml",
+  "rules": [
+    {
+      "state": "inactive",
+      "name": "TipsBankApiDown",
+      "query": "up{job=~\"tipsbank-contas/api-contas|tipsbank-transacoes/api-transacoes|tipsbank-auditoria/auditoria\"} == 0",
+      "duration": 120,
+      "keepFiringFor": 0,
+      "labels": {
+        "severity": "critical"
+      },
+      "annotations": {
+        "description": "Target {{ $labels.instance }} sem resposta há mais de 2 minutos.",
+        "summary": "API {{ $labels.job }} está down"
+      },
+      "alerts": [],
+      "health": "ok",
+      "evaluationTime": 0.000241679,
+      "lastEvaluation": "2026-05-14T23:58:33.919072703Z",
+      "type": "alerting"
+    },
+    {
+      "state": "inactive",
+      "name": "TipsBankP99Alto",
+      "query": "histogram_quantile(0.99, sum by (job, le) (rate(http_request_duration_seconds_bucket{namespace=~\"tipsbank-.*\"}[5m]))) > 0.5",
+      "duration": 300,
+      "keepFiringFor": 0,
+      "labels": {
+        "severity": "warning"
+      },
+      "annotations": {
+        "description": "P99 atual = {{ $value | humanizeDuration }}",
+        "summary": "P99 de latência acima de 500ms em {{ $labels.job }}"
+      },
+      "alerts": [],
+      "health": "ok",
+      "evaluationTime": 0.000177022,
+      "lastEvaluation": "2026-05-14T23:58:33.919323893Z",
+      "type": "alerting"
+    },
+    {
+      "state": "inactive",
+      "name": "TipsBankErroAltoApi",
+      "query": "(sum by (job) (rate(http_requests_total{namespace=~\"tipsbank-.*\",status=~\"5..\"}[3m])) / sum by (job) (rate(http_requests_total{namespace=~\"tipsbank-.*\"}[3m]))) > 0.05",
+      "duration": 180,
+      "keepFiringFor": 0,
+      "labels": {
+        "severity": "critical"
+      },
+      "annotations": {
+        "description": "Taxa atual: {{ $value | humanizePercentage }}",
+        "summary": "Taxa de erros 5xx > 5% em {{ $labels.job }}"
+      },
+      "alerts": [],
+      "health": "ok",
+      "evaluationTime": 0.000147981,
+      "lastEvaluation": "2026-05-14T23:58:33.919505298Z",
+      "type": "alerting"
+    },
+    {
+      "state": "inactive",
+      "name": "TipsBankPodCrashLoop",
+      "query": "increase(kube_pod_container_status_restarts_total{namespace=~\"tipsbank-.*\"}[10m]) > 3",
+      "duration": 300,
+      "keepFiringFor": 0,
+      "labels": {
+        "severity": "warning"
+      },
+      "annotations": {
+        "description": "{{ $value }} restarts nos últimos 10 minutos no namespace {{ $labels.namespace }}.",
+        "summary": "Pod {{ $labels.pod }} em CrashLoop"
+      },
+      "alerts": [],
+      "health": "ok",
+      "evaluationTime": 0.000304544,
+      "lastEvaluation": "2026-05-14T23:58:33.919658071Z",
+      "type": "alerting"
+    }
+  ],
+  "interval": 30,
+  "limit": 0,
+  "evaluationTime": 0.000921205,
+  "lastEvaluation": "2026-05-14T23:58:33.919045151Z"
+}
+```
+
+---
+
+### Teste de disparo dos alertas
+
+#### 1. `TipsBankApiDown`
+
+**Como reproduzir:** escalar uma das APIs para 0 réplicas e aguardar 2 minutos.
+
+```bash
+kubectl scale -n tipsbank-contas deploy/api-contas --replicas=0
+# aguardar 2m, depois verificar
+curl -ks https://prometheus.tipsbank.local:8443/api/v1/alerts | jq '.data.alerts'
+```
+
+**Evidência (alerta em estado FIRING):**
+
+```
+[
+  {
+    "labels": {
+      "alertname": "TargetDown",
+      "job": "kube-controller-manager",
+      "namespace": "kube-system",
+      "service": "kube-prometheus-stack-kube-controller-manager",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "100% of the kube-controller-manager/kube-prometheus-stack-kube-controller-manager targets in kube-system namespace are down.",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/general/targetdown",
+      "summary": "One or more targets are unreachable."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:39:36.139252406Z",
+    "value": "1e+02"
+  },
+  {
+    "labels": {
+      "alertname": "TargetDown",
+      "job": "kube-scheduler",
+      "namespace": "kube-system",
+      "service": "kube-prometheus-stack-kube-scheduler",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "100% of the kube-scheduler/kube-prometheus-stack-kube-scheduler targets in kube-system namespace are down.",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/general/targetdown",
+      "summary": "One or more targets are unreachable."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:39:36.139252406Z",
+    "value": "1e+02"
+  },
+  {
+    "labels": {
+      "alertname": "TargetDown",
+      "job": "api-transacoes",
+      "namespace": "tipsbank-transacoes",
+      "service": "api-transacoes",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "100% of the api-transacoes/api-transacoes targets in tipsbank-transacoes namespace are down.",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/general/targetdown",
+      "summary": "One or more targets are unreachable."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:40:36.139252406Z",
+    "value": "1e+02"
+  },
+  {
+    "labels": {
+      "alertname": "TargetDown",
+      "job": "auditoria",
+      "namespace": "tipsbank-auditoria",
+      "service": "auditoria",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "100% of the auditoria/auditoria targets in tipsbank-auditoria namespace are down.",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/general/targetdown",
+      "summary": "One or more targets are unreachable."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T21:27:06.139252406Z",
+    "value": "1e+02"
+  },
+  {
+    "labels": {
+      "alertname": "TargetDown",
+      "job": "kube-etcd",
+      "namespace": "kube-system",
+      "service": "kube-prometheus-stack-kube-etcd",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "100% of the kube-etcd/kube-prometheus-stack-kube-etcd targets in kube-system namespace are down.",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/general/targetdown",
+      "summary": "One or more targets are unreachable."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:39:06.139252406Z",
+    "value": "1e+02"
+  },
+  {
+    "labels": {
+      "alertname": "TargetDown",
+      "job": "kube-proxy",
+      "namespace": "kube-system",
+      "service": "kube-prometheus-stack-kube-proxy",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "100% of the kube-proxy/kube-prometheus-stack-kube-proxy targets in kube-system namespace are down.",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/general/targetdown",
+      "summary": "One or more targets are unreachable."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:39:06.139252406Z",
+    "value": "1e+02"
+  },
+  {
+    "labels": {
+      "alertname": "Watchdog",
+      "severity": "none"
+    },
+    "annotations": {
+      "description": "This is an alert meant to ensure that the entire alerting pipeline is functional.\nThis alert is always firing, therefore it should always be firing in Alertmanager\nand always fire against a receiver. There are integrations with various notification\nmechanisms that send a notification when this alert is not firing. For example the\n\"DeadMansSnitch\" integration in PagerDuty.\n",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/general/watchdog",
+      "summary": "An alert that should always be firing to certify that Alertmanager is working properly."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:39:06.139252406Z",
+    "value": "1e+00"
+  },
+  {
+    "labels": {
+      "alertname": "etcdMembersDown",
+      "container": "etcd",
+      "job": "kube-etcd",
+      "namespace": "kube-system",
+      "service": "kube-prometheus-stack-kube-etcd",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "etcd cluster \"kube-etcd\": members are down (1).",
+      "summary": "etcd cluster members are down."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:39:22.187294644Z",
+    "value": "1e+00"
+  },
+  {
+    "labels": {
+      "alertname": "etcdInsufficientMembers",
+      "container": "etcd",
+      "endpoint": "http-metrics",
+      "job": "kube-etcd",
+      "namespace": "kube-system",
+      "service": "kube-prometheus-stack-kube-etcd",
+      "severity": "critical"
+    },
+    "annotations": {
+      "description": "etcd cluster \"kube-etcd\": insufficient members (0).",
+      "summary": "etcd cluster has insufficient number of members."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:39:22.187294644Z",
+    "value": "0e+00"
+  },
+  {
+    "labels": {
+      "alertname": "NodeClockNotSynchronising",
+      "container": "node-exporter",
+      "endpoint": "http-metrics",
+      "instance": "172.18.0.7:9100",
+      "job": "node-exporter",
+      "namespace": "tipsbank-monitoring",
+      "pod": "kube-prometheus-stack-prometheus-node-exporter-8chst",
+      "service": "kube-prometheus-stack-prometheus-node-exporter",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "Clock at 172.18.0.7:9100 is not synchronising. Ensure NTP is configured on this host.",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/node/nodeclocknotsynchronising",
+      "summary": "Clock not synchronising."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:38:59.108451942Z",
+    "value": "0e+00"
+  },
+  {
+    "labels": {
+      "alertname": "NodeClockNotSynchronising",
+      "container": "node-exporter",
+      "endpoint": "http-metrics",
+      "instance": "172.18.0.6:9100",
+      "job": "node-exporter",
+      "namespace": "tipsbank-monitoring",
+      "pod": "kube-prometheus-stack-prometheus-node-exporter-hkwp2",
+      "service": "kube-prometheus-stack-prometheus-node-exporter",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "Clock at 172.18.0.6:9100 is not synchronising. Ensure NTP is configured on this host.",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/node/nodeclocknotsynchronising",
+      "summary": "Clock not synchronising."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:39:29.108451942Z",
+    "value": "0e+00"
+  },
+  {
+    "labels": {
+      "alertname": "NodeClockNotSynchronising",
+      "container": "node-exporter",
+      "endpoint": "http-metrics",
+      "instance": "172.18.0.8:9100",
+      "job": "node-exporter",
+      "namespace": "tipsbank-monitoring",
+      "pod": "kube-prometheus-stack-prometheus-node-exporter-kpfz6",
+      "service": "kube-prometheus-stack-prometheus-node-exporter",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "Clock at 172.18.0.8:9100 is not synchronising. Ensure NTP is configured on this host.",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/node/nodeclocknotsynchronising",
+      "summary": "Clock not synchronising."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:39:29.108451942Z",
+    "value": "0e+00"
+  },
+  {
+    "labels": {
+      "alertname": "NodeClockNotSynchronising",
+      "container": "node-exporter",
+      "endpoint": "http-metrics",
+      "instance": "172.18.0.9:9100",
+      "job": "node-exporter",
+      "namespace": "tipsbank-monitoring",
+      "pod": "kube-prometheus-stack-prometheus-node-exporter-6tvsc",
+      "service": "kube-prometheus-stack-prometheus-node-exporter",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "Clock at 172.18.0.9:9100 is not synchronising. Ensure NTP is configured on this host.",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/node/nodeclocknotsynchronising",
+      "summary": "Clock not synchronising."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:38:59.108451942Z",
+    "value": "0e+00"
+  },
+  {
+    "labels": {
+      "alertname": "CPUThrottlingHigh",
+      "container": "collector",
+      "instance": "172.18.0.9:10250",
+      "namespace": "tipsbank-monitoring",
+      "pod": "node-collector-pqxdd",
+      "service": "kube-prometheus-stack-kubelet",
+      "severity": "info"
+    },
+    "annotations": {
+      "description": "55.56% throttling of CPU in namespace tipsbank-monitoring for container collector in pod node-collector-pqxdd on cluster .",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/kubernetes/cputhrottlinghigh",
+      "summary": "Processes experience elevated CPU throttling."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:42:38.373227266Z",
+    "value": "5.555555555555555e-01"
+  },
+  {
+    "labels": {
+      "alertname": "CPUThrottlingHigh",
+      "container": "collector",
+      "instance": "172.18.0.7:10250",
+      "namespace": "tipsbank-monitoring",
+      "pod": "node-collector-n5b2w",
+      "service": "kube-prometheus-stack-kubelet",
+      "severity": "info"
+    },
+    "annotations": {
+      "description": "55.17% throttling of CPU in namespace tipsbank-monitoring for container collector in pod node-collector-n5b2w on cluster .",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/kubernetes/cputhrottlinghigh",
+      "summary": "Processes experience elevated CPU throttling."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:42:38.373227266Z",
+    "value": "5.517241379310345e-01"
+  },
+  {
+    "labels": {
+      "alertname": "CPUThrottlingHigh",
+      "container": "collector",
+      "instance": "172.18.0.6:10250",
+      "namespace": "tipsbank-monitoring",
+      "pod": "node-collector-4xmpv",
+      "service": "kube-prometheus-stack-kubelet",
+      "severity": "info"
+    },
+    "annotations": {
+      "description": "65.62% throttling of CPU in namespace tipsbank-monitoring for container collector in pod node-collector-4xmpv on cluster .",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/kubernetes/cputhrottlinghigh",
+      "summary": "Processes experience elevated CPU throttling."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:42:38.373227266Z",
+    "value": "6.5625e-01"
+  },
+  {
+    "labels": {
+      "alertname": "CPUThrottlingHigh",
+      "container": "collector",
+      "instance": "172.18.0.8:10250",
+      "namespace": "tipsbank-monitoring",
+      "pod": "node-collector-psqlp",
+      "service": "kube-prometheus-stack-kubelet",
+      "severity": "info"
+    },
+    "annotations": {
+      "description": "65.45% throttling of CPU in namespace tipsbank-monitoring for container collector in pod node-collector-psqlp on cluster .",
+      "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/kubernetes/cputhrottlinghigh",
+      "summary": "Processes experience elevated CPU throttling."
+    },
+    "state": "firing",
+    "activeAt": "2026-05-14T20:42:38.373227266Z",
+    "value": "6.545454545454545e-01"
+  }
+]
+```
+
+---
+
+#### 2. `TipsBankP99Alto`
+
+![](./prints-evidencias/semana3/09-grafana-locust.png)
+
+---
+
+### Alertas recebidos pelo Alertmanager
+
+```bash
+kubectl -n tipsbank-monitoring port-forward svc/kube-prometheus-stack-alertmanager 9093:9093 & curl -ks http://localhost:9093/api/v2/alerts | jq '.[] | {labels: .labels, status: .status.state, startsAt: .startsAt}'
+```
+
+```
+{
+  "labels": {
+    "alertname": "TargetDown",
+    "job": "kube-etcd",
+    "namespace": "kube-system",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-kube-etcd",
+    "severity": "warning"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:49:06.139Z"
+}
+{
+  "labels": {
+    "alertname": "TargetDown",
+    "job": "kube-proxy",
+    "namespace": "kube-system",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-kube-proxy",
+    "severity": "warning"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:49:06.139Z"
+}
+{
+  "labels": {
+    "alertname": "NodeClockNotSynchronising",
+    "container": "node-exporter",
+    "endpoint": "http-metrics",
+    "instance": "172.18.0.8:9100",
+    "job": "node-exporter",
+    "namespace": "tipsbank-monitoring",
+    "pod": "kube-prometheus-stack-prometheus-node-exporter-kpfz6",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-prometheus-node-exporter",
+    "severity": "warning"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:49:29.108Z"
+}
+{
+  "labels": {
+    "alertname": "NodeClockNotSynchronising",
+    "container": "node-exporter",
+    "endpoint": "http-metrics",
+    "instance": "172.18.0.9:9100",
+    "job": "node-exporter",
+    "namespace": "tipsbank-monitoring",
+    "pod": "kube-prometheus-stack-prometheus-node-exporter-6tvsc",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-prometheus-node-exporter",
+    "severity": "warning"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:48:59.108Z"
+}
+{
+  "labels": {
+    "alertname": "Watchdog",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "severity": "none"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:39:06.139Z"
+}
+{
+  "labels": {
+    "alertname": "NodeClockNotSynchronising",
+    "container": "node-exporter",
+    "endpoint": "http-metrics",
+    "instance": "172.18.0.6:9100",
+    "job": "node-exporter",
+    "namespace": "tipsbank-monitoring",
+    "pod": "kube-prometheus-stack-prometheus-node-exporter-hkwp2",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-prometheus-node-exporter",
+    "severity": "warning"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:49:29.108Z"
+}
+{
+  "labels": {
+    "alertname": "CPUThrottlingHigh",
+    "container": "collector",
+    "instance": "172.18.0.7:10250",
+    "namespace": "tipsbank-monitoring",
+    "pod": "node-collector-n5b2w",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-kubelet",
+    "severity": "info"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:57:38.373Z"
+}
+{
+  "labels": {
+    "alertname": "TargetDown",
+    "job": "kube-scheduler",
+    "namespace": "kube-system",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-kube-scheduler",
+    "severity": "warning"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:49:36.139Z"
+}
+{
+  "labels": {
+    "alertname": "NodeClockNotSynchronising",
+    "container": "node-exporter",
+    "endpoint": "http-metrics",
+    "instance": "172.18.0.7:9100",
+    "job": "node-exporter",
+    "namespace": "tipsbank-monitoring",
+    "pod": "kube-prometheus-stack-prometheus-node-exporter-8chst",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-prometheus-node-exporter",
+    "severity": "warning"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:48:59.108Z"
+}
+{
+  "labels": {
+    "alertname": "etcdInsufficientMembers",
+    "container": "etcd",
+    "endpoint": "http-metrics",
+    "job": "kube-etcd",
+    "namespace": "kube-system",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-kube-etcd",
+    "severity": "critical"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:42:22.187Z"
+}
+{
+  "labels": {
+    "alertname": "etcdMembersDown",
+    "container": "etcd",
+    "job": "kube-etcd",
+    "namespace": "kube-system",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-kube-etcd",
+    "severity": "warning"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:59:22.187Z"
+}
+{
+  "labels": {
+    "alertname": "CPUThrottlingHigh",
+    "container": "collector",
+    "instance": "172.18.0.6:10250",
+    "namespace": "tipsbank-monitoring",
+    "pod": "node-collector-4xmpv",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-kubelet",
+    "severity": "info"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:57:38.373Z"
+}
+{
+  "labels": {
+    "alertname": "TargetDown",
+    "job": "kube-controller-manager",
+    "namespace": "kube-system",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-kube-controller-manager",
+    "severity": "warning"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:49:36.139Z"
+}
+{
+  "labels": {
+    "alertname": "TargetDown",
+    "job": "auditoria",
+    "namespace": "tipsbank-auditoria",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "auditoria",
+    "severity": "warning"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T21:37:06.139Z"
+}
+{
+  "labels": {
+    "alertname": "CPUThrottlingHigh",
+    "container": "collector",
+    "instance": "172.18.0.8:10250",
+    "namespace": "tipsbank-monitoring",
+    "pod": "node-collector-psqlp",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-kubelet",
+    "severity": "info"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:57:38.373Z"
+}
+{
+  "labels": {
+    "alertname": "TargetDown",
+    "job": "api-contas",
+    "namespace": "tipsbank-contas",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "api-contas",
+    "severity": "warning"
+  },
+  "status": "active",
+  "startsAt": "2026-05-15T00:18:06.139Z"
+}
+{
+  "labels": {
+    "alertname": "TargetDown",
+    "job": "api-transacoes",
+    "namespace": "tipsbank-transacoes",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "api-transacoes",
+    "severity": "warning"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:50:36.139Z"
+}
+{
+  "labels": {
+    "alertname": "CPUThrottlingHigh",
+    "container": "collector",
+    "instance": "172.18.0.9:10250",
+    "namespace": "tipsbank-monitoring",
+    "pod": "node-collector-pqxdd",
+    "prometheus": "tipsbank-monitoring/kube-prometheus-stack-prometheus",
+    "service": "kube-prometheus-stack-kubelet",
+    "severity": "info"
+  },
+  "status": "active",
+  "startsAt": "2026-05-14T20:57:38.373Z"
+}
+```
+
+

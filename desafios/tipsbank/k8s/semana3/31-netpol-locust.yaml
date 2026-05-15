@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-locust-ingress
+  namespace: tipsbank-transacoes
+spec:
+  podSelector:
+    matchLabels:
+      app: api-transacoes
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tipsbank-monitoring
+          podSelector:
+            matchLabels:
+              app: locust
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+# Egress: permite que o locust (tipsbank-monitoring) alcance a api-transacoes.
+# Necessário se tipsbank-monitoring tiver default-deny de egress (Semana 2).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-locust-egress
+  namespace: tipsbank-monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app: locust
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tipsbank-transacoes
+          podSelector:
+            matchLabels:
+              app: api-transacoes
+      ports:
+        - protocol: TCP
+          port: 8080

@@ -1,0 +1,114 @@
+# k8s/semana3/kind-cluster.yaml
+#
+# Cluster KIND multi-node para testes locais da Semana 3 do TipsBank.
+# Substitui o cluster kubeadm/Vagrant para desenvolvimento local sem EKS.
+#
+# Topologia (4 nós):
+#   tipsbank-control-plane  — Ingress-NGINX (HostPort 80/443)
+#   tipsbank-worker         — zone-a: postgres-primary, NFS, workloads gerais
+#   tipsbank-worker2        — zone-b: réplicas secundárias (anti-affinity preferred)
+#   tipsbank-worker3        — zone-c: compliance=strict (postgres-replica only)
+#
+# ─── Pré-requisitos ────────────────────────────────────────────────────────
+#   kind    >= v0.20
+#   kubectl >= 1.29
+#   helm    >= 3.14
+#   Docker com ≥ 8 GB RAM disponível
+#
+# ─── Criação do cluster ────────────────────────────────────────────────────
+#   kind create cluster --config k8s/semana3/kind-cluster.yaml
+#
+# ─── Pós-criação (executar uma vez após o cluster estar Ready) ─────────────
+#
+#   # Ingress-NGINX (manifesto otimizado para KIND — usa HostPort no CP)
+#   kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+#   kubectl wait -n ingress-nginx --for=condition=ready pod \
+#     --selector=app.kubernetes.io/component=controller --timeout=120s
+#
+#   # Entradas no /etc/hosts (acesso pelo navegador)
+#   echo "127.0.0.1  app.tipsbank.local api.tipsbank.local grafana.tipsbank.local" \
+#     | sudo tee -a /etc/hosts
+#
+#   # Confirmar nós e taint do worker3
+#   kubectl get nodes -o wide
+#   kubectl describe node tipsbank-worker3 | grep -A 3 Taints
+#
+# ─── Limitações conhecidas em KIND ─────────────────────────────────────────
+#
+#   NFS: o nfs-ganesha StatefulSet precisa de módulos NFS do kernel do host.
+#   Se o PVC da auditoria ficar Pending, substitua temporariamente por:
+#     storageClassName: standard     # StorageClass padrão do KIND (local-path)
+#     accessModes: ["ReadWriteOnce"] # RWX não disponível sem NFS real
+#   Isso permite testar toda a Semana 3 sem NFS funcional.
+#
+#   LoadBalancer: KIND não tem cloud-provider integrado. Use NodePort ou
+#   HostPort. O Ingress-NGINX já é configurado via HostPort neste cluster.
+
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: tipsbank
+
+networking:
+  podSubnet: "10.244.0.0/16"
+  serviceSubnet: "10.96.0.0/12"
+
+nodes:
+  # ─── Control-plane ────────────────────────────────────────────────────────
+  # Rotulado como ingress-ready para o DaemonSet do Ingress-NGINX usar NodeSelector.
+  # Portas 80 e 443 do host são encaminhadas para cá via HostPort.
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    # Docker rootless bloqueia bind em portas < 1024.
+    # Usamos 8080/8443 no host → mapeados para 80/443 dentro do nó.
+    # Acesso pelo navegador: http://app.tipsbank.local:8080
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 8080
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 8443
+        protocol: TCP
+
+  # ─── Worker 1 (tipsbank-worker) ───────────────────────────────────────────
+  # Zone-a: postgres-primary, nfs-server (auditoria), api-contas réplica 1,
+  # api-transacoes réplica 1, auditoria réplica 1, web.
+  # Sem taint — aceita qualquer carga de trabalho.
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "topology.kubernetes.io/zone=zone-a,tipsbank/role=worker1"
+
+  # ─── Worker 2 (tipsbank-worker2) ──────────────────────────────────────────
+  # Zone-b: réplicas secundárias dos Deployments (satisfaz anti-affinity preferred).
+  # Sem taint — aceita qualquer carga de trabalho.
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "topology.kubernetes.io/zone=zone-b,tipsbank/role=worker2"
+
+  # ─── Worker 3 (tipsbank-worker3) ──────────────────────────────────────────
+  # Zone-c: zona de compliance. Taint compliance=strict:NoSchedule aplicado
+  # no momento do join via kubeadm — apenas pods com toleration adequada chegam aqui.
+  # Destinado exclusivamente ao postgres-replica (Etapa 3.3).
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "topology.kubernetes.io/zone=zone-c,tipsbank/role=worker3"
+          taints:
+            - key: compliance
+              value: strict
+              effect: NoSchedule
