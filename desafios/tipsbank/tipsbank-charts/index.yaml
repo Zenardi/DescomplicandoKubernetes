@@ -3,7 +3,7 @@ entries:
   tipsbank:
   - apiVersion: v2
     appVersion: 1.2.0
-    created: "2026-05-25T09:40:11.664303138-03:00"
+    created: "2026-05-25T09:44:05.48875293-03:00"
     description: TipsBank — banco digital ficticio (Desafio Final DK8s 2025)
     digest: 75465e6af8f6344ac0cd517c629df52f3e5ce74f1f7d1158580611e554a87aa0
     maintainers:
@@ -12,6 +12,6 @@ entries:
     name: tipsbank
     type: application
     urls:
-    - https://zenardi.github.io/DescomplicandoKubernetes/tipsbank-1.0.0.tgz
+    - https://zenardi.github.io/DescomplicandoKubernetes/desafios/tipsbank/tipsbank-charts/tipsbank-1.0.0.tgz
     version: 1.0.0
-generated: "2026-05-25T09:40:11.663843136-03:00"
+generated: "2026-05-25T09:44:05.488199327-03:00"
