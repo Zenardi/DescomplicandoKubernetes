@@ -1556,17 +1556,17 @@ echo "Link do video final: <preencher em EVIDENCIAS.md>"
 
 ### Checklist final (todas as 4 semanas)
 
-- [ ] 4 imagens (3 APIs Distroless + `web` nonroot/minimal) Trivy clean + Cosign
-- [ ] Cluster kubeadm/KIND 3-nodes **OU** EKS funcional
-- [ ] Helm Chart umbrella instala tudo num cluster limpo em < 10 min
-- [ ] 6 Kyverno ClusterPolicies (3 Validate + 1 Mutate + 1 Generate + 1 Registry)
-- [ ] 4 perfis RBAC com X.509 + 2 ServiceAccounts com Token validados
-- [ ] NetworkPolicy default-deny em todos os ns `tipsbank-*`
-- [ ] kube-prometheus-stack + 4 alertas + dashboards
-- [ ] 3 HPAs + Locust 200 users + escala observada
-- [ ] Canary 90/10 entre v1 e v2
-- [ ] `EVIDENCIAS.md` com saidas dos 7 checks de compliance + 3 rejeicoes do Kyverno
-- [ ] Video demo final publicado e linkado em `EVIDENCIAS.md`
+- [X] 4 imagens (3 APIs Distroless + `web` nonroot/minimal) Trivy clean + Cosign
+- [X] Cluster kubeadm/KIND 3-nodes **OU** EKS funcional
+- [X] Helm Chart umbrella instala tudo num cluster limpo em < 10 min
+- [X] 6 Kyverno ClusterPolicies (3 Validate + 1 Mutate + 1 Generate + 1 Registry)
+- [X] 4 perfis RBAC com X.509 + 2 ServiceAccounts com Token validados
+- [X] NetworkPolicy default-deny em todos os ns `tipsbank-*`
+- [X] kube-prometheus-stack + 4 alertas + dashboards
+- [X] 3 HPAs + Locust 200 users + escala observada
+- [X] Canary 90/10 entre v1 e v2
+- [X] `EVIDENCIAS.md` com saidas dos 7 checks de compliance + 3 rejeicoes do Kyverno
+- [X] Video demo final publicado e linkado em `EVIDENCIAS.md`
 
 ---
 

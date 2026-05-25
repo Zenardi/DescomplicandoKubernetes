@@ -36,6 +36,7 @@
     - [Etapa 4.3 — Kyverno: Generate (NetworkPolicy automática) + Registry confiável](#etapa-43--kyverno-generate-networkpolicy-automática--registry-confiável)
     - [Etapa 4.4 — RBAC: 4 perfis com certificados X.509](#etapa-44--rbac-4-perfis-com-certificados-x509)
     - [Etapa 4.5 — Helm Chart umbrella](#etapa-45--helm-chart-umbrella)
+    - [Etapa 4.6 — Teste de compliance final](#etapa-46--teste-de-compliance-final)
 
 
 ## Etapa 1.2 — Justificativa: Dockerfile multi-stage + runtime Distroless nonroot
@@ -4029,3 +4030,73 @@ spec:
       interval: 15s
 ```
 
+### Etapa 4.6 — Teste de compliance final
+
+Evidencias de `scripts/compliance-chek.sh`: `evidencias/compliance-20260525-1007.log`
+
+Tentativas que DEVEM ser bloqueadas:
+
+```sh
+> kubectl run ruim-1 --image=nginx:latest
+Error from server: admission webhook "validate.kyverno.svc-fail" denied the request: 
+
+resource Pod/default/ruim-1 was blocked due to the following policies 
+
+allowed-image-registries:
+  check-registry: 'validation error: Imagem fora dos registries confiaveis (zenardi/*,
+    gcr.io/distroless/*, registry.k8s.io/*, quay.io/jetstack/*, quay.io/kyverno/*,
+    ghcr.io/kyverno/*). rule check-registry failed at path /spec/containers/0/image/'
+disallow-latest-tag:
+  require-image-tag: 'validation error: Toda imagem precisa de uma tag explicita (nao
+    pode ser :latest e nao pode estar sem tag). rule require-image-tag failed at path
+    /spec/containers/0/image/'
+Error from server: error when creating "STDIN": admission webhook "validate.kyverno.svc-fail" denied the request: 
+
+##################################################################
+
+> cat <<EOF | kubectl apply -f - 2>&1 | tee -a EVIDENCIAS.md
+apiVersion: v1
+kind: Pod
+metadata: { name: ruim-2, namespace: default }
+spec:
+  securityContext: { runAsUser: 0 }
+  containers:
+    - { name: c, image: nginx:1.27 }
+EOF
+
+resource Pod/default/ruim-2 was blocked due to the following policies 
+
+allowed-image-registries:
+  check-registry: 'validation error: Imagem fora dos registries confiaveis (zenardi/*,
+    gcr.io/distroless/*, registry.k8s.io/*, quay.io/jetstack/*, quay.io/kyverno/*,
+    ghcr.io/kyverno/*). rule check-registry failed at path /spec/containers/0/image/'
+disallow-root-user:
+  check-runasnonroot: 'validation error: Pods nao podem rodar como root (runAsUser
+    != 0). UID 0 e proibido. rule check-runasnonroot failed at path /spec/securityContext/runAsUser/'
+Error from server: error when creating "STDIN": admission webhook "validate.kyverno.svc-fail" denied the request: 
+
+#######################################################################3
+
+> cat <<EOF | kubectl apply -f - 2>&1 | tee -a EVIDENCIAS.md
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: ruim-3, namespace: default, labels: { app: ruim } }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: ruim } }
+  template:
+    metadata: { labels: { app: ruim } }
+    spec:
+      containers: [{ name: c, image: nginx:1.27 }]
+EOF
+
+resource Deployment/default/ruim-3 was blocked due to the following policies 
+
+allowed-image-registries:
+  autogen-check-registry: 'validation error: Imagem fora dos registries confiaveis
+    (zenardi/*, gcr.io/distroless/*, registry.k8s.io/*, quay.io/jetstack/*, quay.io/kyverno/*,
+    ghcr.io/kyverno/*). rule autogen-check-registry failed at path /spec/template/spec/containers/0/image/'
+require-labels:
+  check-labels-app-team-env: 'validation error: Workloads precisam das labels: app,
+    team, env. rule check-labels-app-team-env failed at path /metadata/labels/env/'
+```

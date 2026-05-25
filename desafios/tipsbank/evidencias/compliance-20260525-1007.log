@@ -1,0 +1,42 @@
+================================================================
+TipsBank — Compliance Check  (2026-05-25T13:07:06Z)
+================================================================
+
+## 1. Imagens FORA do registry confiavel (namespaces de app)
+   (kube-system / kyverno / tipsbank-monitoring sao 3rd party — excluidos)
+  OK:   Nenhuma imagem fora do registry confiavel
+
+## 2. Pods rodando como root (tipsbank-*)
+  OK:   Nenhum pod rodando como root
+
+## 3. Workloads SEM livenessProbe no container principal
+   (verifica containers[0]; sidecar log-forwarder e afins sao ignorados)
+  OK:   Todos os workloads possuem livenessProbe
+
+## 4. Workloads SEM resources.limits no container principal
+  OK:   Todos os workloads possuem resources.limits
+
+## 5. Policies Kyverno ativas
+  OK:   ClusterPolicy/allowed-image-registries
+  OK:   ClusterPolicy/disallow-latest-tag
+  OK:   ClusterPolicy/disallow-root-user
+  OK:   ClusterPolicy/generate-default-deny-netpol
+  OK:   ClusterPolicy/mutate-security-context
+  OK:   ClusterPolicy/require-labels
+
+## 6. NetworkPolicies por namespace
+  OK:   tipsbank-contas: 5 NetworkPolicies
+  OK:   tipsbank-transacoes: 5 NetworkPolicies
+  OK:   tipsbank-auditoria: 4 NetworkPolicies
+  OK:   tipsbank-web: 4 NetworkPolicies
+
+## 7. Imagens assinadas (Cosign)
+  OK:   zenardi/tipsbank-api-contas:v1.1.0
+  OK:   zenardi/tipsbank-api-transacoes:v1.2.0
+  OK:   zenardi/tipsbank-auditoria:v1.1.0
+  OK:   zenardi/tipsbank-web:v1.0.0
+
+================================================================
+Resultado: 18 OK | 0 FAIL
+STATUS: PASS
+================================================================

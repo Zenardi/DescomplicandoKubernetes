@@ -739,17 +739,17 @@ O vídeo deve mostrar, em ordem:
 
 ## Checkpoint final (todas as semanas)
 
-- [ ] 4 imagens Distroless/minimal, 0 HIGH/CRITICAL, assinadas com Cosign (3 APIs Distroless + `web` nginx-unprivileged nonroot/minimal)
-- [ ] Cluster kubeadm 3-nodes + Cluster EKS paralelo
-- [ ] Helm Chart umbrella instalando **tudo** num cluster limpo
-- [ ] 3 Kyverno Policies (Validate + Mutate + Generate) ativas
-- [ ] 4 perfis RBAC com certificados, validados
-- [ ] NetworkPolicy zero-trust em todos os ns
-- [ ] kube-prometheus-stack + 4 alertas + dashboards
-- [ ] 3 HPAs + Locust stress test passando
-- [ ] Canary 90/10 entre v1 e v2
-- [ ] Vídeo demo final publicado
-- [ ] `EVIDENCIAS.md` com outputs, prints e justificativas
+- [X] 4 imagens Distroless/minimal, 0 HIGH/CRITICAL, assinadas com Cosign (3 APIs Distroless + `web` nginx-unprivileged nonroot/minimal)
+- [X] Cluster kubeadm 3-nodes + Cluster EKS paralelo
+- [X] Helm Chart umbrella instalando **tudo** num cluster limpo
+- [X] 3 Kyverno Policies (Validate + Mutate + Generate) ativas
+- [X] 4 perfis RBAC com certificados, validados
+- [X] NetworkPolicy zero-trust em todos os ns
+- [X] kube-prometheus-stack + 4 alertas + dashboards
+- [X] 3 HPAs + Locust stress test passando
+- [X] Canary 90/10 entre v1 e v2
+- [X] Vídeo demo final publicado
+- [X] `EVIDENCIAS.md` com outputs, prints e justificativas
 
 ---
 
