@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: transacoes-app-config
+  namespace: tipsbank-transacoes
+  labels:
+    {{- include "tipsbank.labels" . | nindent 4 }}
+data:
+  CONTAS_URL:    "http://api-contas.tipsbank-contas.svc.cluster.local:8080"
+  AUDITORIA_URL: "http://auditoria.tipsbank-auditoria.svc.cluster.local:8080"
+  LOG_LEVEL:     "INFO"
+  LOG_FILE:      "/var/log/app/app.log"

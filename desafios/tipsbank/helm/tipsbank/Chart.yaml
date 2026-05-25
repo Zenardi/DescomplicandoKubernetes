@@ -1,0 +1,9 @@
+apiVersion: v2
+name: tipsbank
+description: TipsBank — banco digital ficticio (Desafio Final DK8s 2025)
+type: application
+version: 1.0.0
+appVersion: "1.2.0"
+maintainers:
+  - name: Eduardo Zenardi
+    email: du.zenardi@gmail.com

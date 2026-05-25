@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tipsbank-app
+  namespace: tipsbank-web
+  labels:
+    {{- include "tipsbank.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+    nginx.ingress.kubernetes.io/limit-req-status-code: "429"
+    cert-manager.io/cluster-issuer: {{ .Values.global.clusterIssuer }}
+spec:
+  ingressClassName: {{ .Values.global.ingressClass }}
+  tls:
+    - hosts:
+        - {{ .Values.web.ingress.host }}
+      secretName: tipsbank-app-tls
+  rules:
+    - host: {{ .Values.web.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  number: 8080

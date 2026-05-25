@@ -1,0 +1,24 @@
+{{- if .Values.policies.enabled }}
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+  labels:
+    {{- include "tipsbank.labels" . | nindent 4 }}
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-image-tag
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      validate:
+        message: "Toda imagem precisa de uma tag explicita (nao pode ser :latest e nao pode estar sem tag)."
+        pattern:
+          spec:
+            containers:
+              - name: "*"
+                image: "!*:latest & *:*"
+{{- end }}

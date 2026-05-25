@@ -1,0 +1,127 @@
+{{- if .Values.contas.postgres.replica.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-replica
+  namespace: tipsbank-contas
+  labels:
+    app: postgres
+    role: replica
+    {{- include "tipsbank.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+    role: replica
+  ports:
+    - name: postgres
+      port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-replica
+  namespace: tipsbank-contas
+  labels:
+    app: postgres
+    role: replica
+    team: {{ .Values.global.team }}
+    env: {{ .Values.global.env }}
+    {{- include "tipsbank.labels" . | nindent 4 }}
+spec:
+  serviceName: postgres-replica
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+      role: replica
+  template:
+    metadata:
+      labels:
+        app: postgres
+        role: replica
+        team: {{ .Values.global.team }}
+        env: {{ .Values.global.env }}
+    spec:
+      tolerations:
+        - key: "compliance"
+          operator: "Equal"
+          value: "strict"
+          effect: "NoSchedule"
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: postgres
+              topologyKey: kubernetes.io/hostname
+      initContainers:
+        - name: wait-primary
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - "until nc -zw3 postgres.tipsbank-contas.svc.cluster.local 5432; do echo 'aguardando primary...'; sleep 3; done"
+      containers:
+        - name: postgres-replica
+          image: {{ .Values.contas.postgres.image }}:{{ .Values.contas.postgres.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.contas.postgres.db | quote }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: contas-db-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: contas-db-secret
+                  key: POSTGRES_PASSWORD
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          startupProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.contas.postgres.user | quote }}, "-d", {{ .Values.contas.postgres.db | quote }}]
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.contas.postgres.user | quote }}, "-d", {{ .Values.contas.postgres.db | quote }}]
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.contas.postgres.user | quote }}, "-d", {{ .Values.contas.postgres.db | quote }}]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 6
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init-sql
+              mountPath: /docker-entrypoint-initdb.d/
+      volumes:
+        - name: init-sql
+          configMap:
+            name: postgres-init-sql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.global.storageClass }}
+        storageClassName: {{ .Values.global.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.contas.postgres.replica.storage }}
+{{- end }}

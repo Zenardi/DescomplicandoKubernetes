@@ -1,0 +1,39 @@
+# values-dev.yaml — sobrescritas para KIND local
+global:
+  env: dev
+  storageClass: standard
+
+contas:
+  api:
+    replicas: 2
+    hpa:
+      min: 2
+      max: 5
+  postgres:
+    storage: 1Gi
+    replica:
+      enabled: true
+      storage: 1Gi
+
+transacoes:
+  api:
+    replicas: 2
+    hpa:
+      min: 2
+      max: 5
+  canary:
+    enabled: true
+
+auditoria:
+  replicas: 1
+  storage:
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+    storageClassName: standard
+  hpa:
+    min: 1
+    max: 3
+
+web:
+  replicas: 1

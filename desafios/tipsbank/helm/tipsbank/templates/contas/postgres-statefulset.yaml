@@ -1,0 +1,105 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: tipsbank-contas
+  labels:
+    app: postgres
+    role: primary
+    {{- include "tipsbank.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+    role: primary
+  ports:
+    - name: pg
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: tipsbank-contas
+  labels:
+    app: postgres
+    role: primary
+    team: {{ .Values.global.team }}
+    env: {{ .Values.global.env }}
+    {{- include "tipsbank.labels" . | nindent 4 }}
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+      role: primary
+  template:
+    metadata:
+      labels:
+        app: postgres
+        role: primary
+        team: {{ .Values.global.team }}
+        env: {{ .Values.global.env }}
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: postgres
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: postgres
+          image: {{ .Values.contas.postgres.image }}:{{ .Values.contas.postgres.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: contas-db-secret
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init-sql
+              mountPath: /docker-entrypoint-initdb.d/
+              readOnly: true
+          startupProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.contas.postgres.user | quote }}, "-d", {{ .Values.contas.postgres.db | quote }}]
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.contas.postgres.user | quote }}, "-d", {{ .Values.contas.postgres.db | quote }}]
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.contas.postgres.user | quote }}, "-d", {{ .Values.contas.postgres.db | quote }}]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        - name: init-sql
+          configMap:
+            name: postgres-init-sql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.global.storageClass }}
+        storageClassName: {{ .Values.global.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.contas.postgres.storage }}

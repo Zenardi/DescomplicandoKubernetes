@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: auditoria
+  namespace: tipsbank-auditoria
+  labels:
+    release: kube-prometheus-stack
+    {{- include "tipsbank.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: auditoria
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

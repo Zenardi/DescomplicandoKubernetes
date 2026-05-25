@@ -1,0 +1,40 @@
+# values-prod.yaml — sobrescritas para EKS
+global:
+  env: prod
+  storageClass: gp3
+
+contas:
+  api:
+    replicas: 3
+    hpa:
+      min: 3
+      max: 12
+  postgres:
+    storage: 20Gi
+    replica:
+      enabled: true
+      storage: 20Gi
+
+transacoes:
+  api:
+    replicas: 3
+    hpa:
+      min: 3
+      max: 20
+  canary:
+    enabled: true
+    weight: 10
+
+auditoria:
+  replicas: 3
+  storage:
+    accessModes:
+      - ReadWriteMany
+    size: 20Gi
+    storageClassName: efs-sc   # EFS CSI StorageClass
+  hpa:
+    min: 2
+    max: 6
+
+web:
+  replicas: 2

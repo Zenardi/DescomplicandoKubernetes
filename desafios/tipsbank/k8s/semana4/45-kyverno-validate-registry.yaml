@@ -1,0 +1,20 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: allowed-image-registries
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-registry
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      validate:
+        message: "Imagem fora dos registries confiaveis (zenardi/*, gcr.io/distroless/*, registry.k8s.io/*, quay.io/jetstack/*, quay.io/kyverno/*, ghcr.io/kyverno/*)."
+        pattern:
+          spec:
+            containers:
+              - name: "*"
+                image: "zenardi/* | gcr.io/distroless/* | registry.k8s.io/* | quay.io/jetstack/* | quay.io/kyverno/* | ghcr.io/kyverno/* | nginxinc/nginx-unprivileged:* | postgres:*"

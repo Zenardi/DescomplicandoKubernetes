@@ -1,0 +1,37 @@
+{{- if .Values.transacoes.api.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-transacoes
+  namespace: tipsbank-transacoes
+  labels:
+    {{- include "tipsbank.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-transacoes
+  minReplicas: {{ .Values.transacoes.api.hpa.min }}
+  maxReplicas: {{ .Values.transacoes.api.hpa.max }}
+  metrics:
+    - type: ContainerResource
+      containerResource:
+        name: cpu
+        container: api-transacoes
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.transacoes.api.hpa.cpuTarget }}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 3
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+{{- end }}

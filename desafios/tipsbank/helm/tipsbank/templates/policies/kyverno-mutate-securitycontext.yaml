@@ -1,0 +1,25 @@
+{{- if .Values.policies.enabled }}
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: mutate-security-context
+  labels:
+    {{- include "tipsbank.labels" . | nindent 4 }}
+spec:
+  background: false
+  rules:
+    - name: add-default-securitycontext
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      mutate:
+        patchStrategicMerge:
+          spec:
+            containers:
+              - (name): "*"
+                securityContext:
+                  +(runAsNonRoot): true
+                  +(readOnlyRootFilesystem): true
+                  +(allowPrivilegeEscalation): false
+{{- end }}

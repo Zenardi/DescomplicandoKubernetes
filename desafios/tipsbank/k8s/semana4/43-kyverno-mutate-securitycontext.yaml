@@ -1,0 +1,40 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: mutate-security-context
+spec:
+  background: false
+  rules:
+    - name: add-default-securitycontext
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      mutate:
+        patchStrategicMerge:
+          spec:
+            containers:
+              - (name): "*"
+                securityContext:
+                  +(runAsNonRoot): true
+                  +(readOnlyRootFilesystem): true
+                  +(allowPrivilegeEscalation): false
+
+---
+
+apiVersion: kyverno.io/v2
+kind: PolicyException
+metadata:
+  name: tipsbank-postgres-rorfs-exception
+  namespace: tipsbank-contas
+spec:
+  exceptions:
+    - policyName: mutate-security-context
+      ruleNames: [add-default-securitycontext]
+  match:
+    any:
+      - resources:
+          kinds: [Pod]
+          selector:
+            matchLabels:
+              app: postgres

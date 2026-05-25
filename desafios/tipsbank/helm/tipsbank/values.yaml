@@ -1,0 +1,118 @@
+global:
+  imagePullPolicy: IfNotPresent
+  ingressClass: nginx
+  clusterIssuer: tipsbank-ca-issuer
+  storageClass: ""       # vazio = default do cluster
+  team: tipsbank
+  env: lab
+
+namespaces:
+  create: true
+
+contas:
+  api:
+    image: zenardi/tipsbank-api-contas
+    tag: v1.1.0
+    replicas: 2
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    hpa:
+      enabled: true
+      min: 2
+      max: 10
+      cpuTarget: 70
+  postgres:
+    image: postgres
+    tag: 16-alpine
+    storage: 2Gi
+    user: tipsbank
+    db: tipsbank
+    password: tipsbank   # NUNCA commitar — passar via --set em producao
+    replica:
+      enabled: true
+      storage: 2Gi
+  basicAuth:
+    # admin:giropops (APR1-MD5, salt=TipsBank0)
+    auth: YWRtaW46JGFwcjEkVGlwc0JhbmskbWxzV3J6N2JJMVNpcTZuVzl4bzN0Lwo=
+  ingress:
+    host: api.tipsbank.local
+
+transacoes:
+  api:
+    image: zenardi/tipsbank-api-transacoes
+    tag: v1.2.0
+    replicas: 2
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    hpa:
+      enabled: true
+      min: 3
+      max: 15
+      cpuTarget: 70
+  canary:
+    enabled: false
+    tag: v2.0.0
+    weight: 10
+  ingress:
+    host: api.tipsbank.local
+
+auditoria:
+  image: zenardi/tipsbank-auditoria
+  tag: v1.1.0
+  replicas: 1
+  storage:
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+    storageClassName: standard
+  hpa:
+    enabled: true
+    min: 1
+    max: 6
+    memoryTarget: 75
+
+web:
+  image: zenardi/tipsbank-web
+  tag: v1.0.0
+  replicas: 2
+  ingress:
+    host: app.tipsbank.local
+
+monitoring:
+  prometheusRule:
+    enabled: true
+  ingress:
+    enabled: true
+    grafanaHost: grafana.tipsbank.local
+    prometheusHost: prometheus.tipsbank.local
+    alertmanagerHost: alertmanager.tipsbank.local
+
+policies:
+  enabled: true
+  registries:
+    - "zenardi/*"
+    - "gcr.io/distroless/*"
+    - "registry.k8s.io/*"
+    - "quay.io/jetstack/*"
+    - "quay.io/kyverno/*"
+    - "ghcr.io/kyverno/*"
+    - "nginxinc/nginx-unprivileged:*"
+    - "postgres:*"
+    - "busybox:*"
+
+rbac:
+  enabled: true
+
+daemonset:
+  nodeCollector:
+    enabled: true

@@ -1,0 +1,24 @@
+{{- if .Values.policies.enabled }}
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: allowed-image-registries
+  labels:
+    {{- include "tipsbank.labels" . | nindent 4 }}
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-registry
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      validate:
+        message: "Imagem fora dos registries confiaveis."
+        pattern:
+          spec:
+            containers:
+              - name: "*"
+                image: {{ join " | " .Values.policies.registries | quote }}
+{{- end }}

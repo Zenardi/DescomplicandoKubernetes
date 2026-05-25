@@ -1,0 +1,25 @@
+{{- if .Values.policies.enabled }}
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-labels
+  labels:
+    {{- include "tipsbank.labels" . | nindent 4 }}
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-labels-app-team-env
+      match:
+        any:
+          - resources:
+              kinds: [Deployment, StatefulSet, DaemonSet]
+      validate:
+        message: "Workloads precisam das labels: app, team, env."
+        pattern:
+          metadata:
+            labels:
+              app: "?*"
+              team: "?*"
+              env: "?*"
+{{- end }}

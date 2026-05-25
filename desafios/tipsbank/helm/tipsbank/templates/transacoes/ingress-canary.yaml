@@ -1,0 +1,29 @@
+{{- if .Values.transacoes.canary.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tipsbank-api-transacoes-canary
+  namespace: tipsbank-transacoes
+  labels:
+    {{- include "tipsbank.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: {{ .Values.transacoes.canary.weight | quote }}
+    nginx.ingress.kubernetes.io/canary-by-header: "X-Canary"
+    nginx.ingress.kubernetes.io/canary-by-header-value: "always"
+spec:
+  ingressClassName: {{ .Values.global.ingressClass }}
+  rules:
+    - host: {{ .Values.transacoes.ingress.host }}
+      http:
+        paths:
+          - path: /transacoes(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: api-transacoes-v2
+                port:
+                  number: 8080
+{{- end }}

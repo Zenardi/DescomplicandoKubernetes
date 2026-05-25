@@ -1,0 +1,27 @@
+{{- if .Values.policies.enabled }}
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-root-user
+  labels:
+    {{- include "tipsbank.labels" . | nindent 4 }}
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-runasnonroot
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      validate:
+        message: "Pods nao podem rodar como root (runAsUser != 0). UID 0 e proibido."
+        pattern:
+          spec:
+            =(securityContext):
+              =(runAsUser): ">0"
+            containers:
+              - name: "*"
+                =(securityContext):
+                  =(runAsUser): ">0"
+{{- end }}

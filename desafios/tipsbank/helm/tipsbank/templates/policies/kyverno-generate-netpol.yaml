@@ -1,0 +1,38 @@
+{{- if .Values.policies.enabled }}
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: generate-default-deny-netpol
+  labels:
+    {{- include "tipsbank.labels" . | nindent 4 }}
+spec:
+  background: false
+  rules:
+    - name: gen-netpol-default-deny
+      match:
+        any:
+          - resources:
+              kinds: [Namespace]
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kube-public
+                - kube-node-lease
+                - default
+                - kyverno
+                - cert-manager
+                - ingress-nginx
+                - tipsbank-monitoring
+      generate:
+        kind: NetworkPolicy
+        apiVersion: networking.k8s.io/v1
+        name: default-deny
+        namespace: "{{ `{{ request.object.metadata.name }}` }}"
+        synchronize: true
+        data:
+          spec:
+            podSelector: {}
+            policyTypes: [Ingress, Egress]
+{{- end }}

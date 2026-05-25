@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tipsbank-api-contas
+  namespace: tipsbank-contas
+  labels:
+    {{- include "tipsbank.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: basic-auth-secret
+    cert-manager.io/cluster-issuer: {{ .Values.global.clusterIssuer }}
+spec:
+  ingressClassName: {{ .Values.global.ingressClass }}
+  tls:
+    - hosts:
+        - {{ .Values.contas.ingress.host }}
+      secretName: tipsbank-api-tls
+  rules:
+    - host: {{ .Values.contas.ingress.host }}
+      http:
+        paths:
+          - path: /contas(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: api-contas
+                port:
+                  number: 8080
